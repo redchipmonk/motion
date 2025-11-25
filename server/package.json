@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "lint": "eslint .",
+    "test": "vitest --run"
   },
   "keywords": [],
   "author": "",
@@ -20,10 +21,17 @@
     "mongoose": "^9.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/node": "^24.10.1",
+    "@types/supertest": "^6.0.3",
+    "eslint": "^9.39.1",
+    "supertest": "^7.1.4",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vitest": "^4.0.14"
   }
 }
