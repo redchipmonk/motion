@@ -14,10 +14,11 @@ app.use(express.json());
 app.get("/health", (_, res) => res.json({ status: "ok" }));
 
 async function start() {
-  if (!process.env.MONGO_URI) {
+  const mongoUri = process.env.MONGO_URI;
+  if (!mongoUri) {
     throw new Error("MONGO_URI is not set");
   }
-  await connectDatabase(process.env.MONGO_URI!);
+  await connectDatabase(mongoUri);
   app.listen(port, () => console.log(`API listening on ${port}`));
 }
 if (process.env.NODE_ENV !== "test") {
