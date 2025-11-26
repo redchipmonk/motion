@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import { connectDatabase } from "./lib/connectDatabase";
-import eventsRouter from "./routes/events";
 
 dotenv.config();
 
@@ -13,7 +12,6 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/health", (_, res) => res.json({ status: "ok" }));
-app.use("/events", eventsRouter);
 
 async function start() {
   const mongoUri = process.env.MONGO_URI;
