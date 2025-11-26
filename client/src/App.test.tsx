@@ -3,8 +3,8 @@ import "@testing-library/jest-dom";
 import App from "./App";
 
 describe("App", () => {
-  it("renders the default heading", () => {
+  it("renders the not logged in heading by default", () => {
     render(<App />);
-    expect(screen.getByRole("heading", { name: /vite \+ react/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /not logged in/i })).toBeInTheDocument();
   });
 });
