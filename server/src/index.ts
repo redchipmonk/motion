@@ -4,9 +4,7 @@ import cors from "cors";
 import { connectDatabase } from "./lib/connectDatabase";
 import session from "express-session";
 import passport from "passport";
-if (process.env.NODE_ENV !== "test") {
-  import("./auth/google");
-}
+import "./auth/google"; 
 import authRoutes from "./routes/auth";
 import { UserDocument } from "./models/user";
 
