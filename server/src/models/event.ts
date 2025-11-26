@@ -37,7 +37,7 @@ const eventSchema = new Schema<EventDocument>(
     images: { type: [String], default: [] },
     price: Number,
     tags: { type: [String], default: [] },
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: false },
   },
   { timestamps: true }
 );
