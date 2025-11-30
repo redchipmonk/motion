@@ -4,19 +4,20 @@ import cors from "cors";
 import { connectDatabase } from "./lib/connectDatabase";
 import session from "express-session";
 import passport from "passport";
-import "./auth/google"; 
+
 import authRoutes from "./routes/auth";
 import { UserDocument } from "./models/user";
 
 dotenv.config();
 
 const port = process.env.PORT || 8000;
+const isTest = process.env.NODE_ENV === "test";
 
 export const app = express();
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: isTest ? true : process.env.FRONTEND_URL || "http://localhost:3000",
     credentials: true,
   })
 );
@@ -24,12 +25,16 @@ app.use(express.json());
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET || "fallback-secret-for-tests-and-ci",
     resave: false,
     saveUninitialized: false,
     cookie: { secure: false, sameSite: "lax" }, //change to secure: true on prod (idk why)
   })
 );
+
+if (!isTest) {
+  import("./auth/google");
+}
 
 app.use(passport.initialize());
 app.use(passport.session());

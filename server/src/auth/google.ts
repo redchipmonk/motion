@@ -1,15 +1,21 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import dotenv from "dotenv";
 import { User } from "../models/user";
 
-dotenv.config();
 if (process.env.NODE_ENV !== "test") {
+  const clientID = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (!clientID || !clientSecret) {
+    console.error("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required in non-test environments");
+    process.exit(1);
+  }
+
   passport.use(
     new GoogleStrategy(
       {
-        clientID: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientID,
+        clientSecret,
         callbackURL: "/auth/google/callback",
       },
       (accessToken, refreshToken, profile, done) => {
