@@ -33,7 +33,7 @@ app.use(
 );
 
 if (!isTest) {
-  import("./auth/google");
+  void import("./auth/google");
 }
 
 app.use(passport.initialize());
