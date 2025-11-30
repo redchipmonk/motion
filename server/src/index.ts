@@ -53,6 +53,7 @@ async function start() {
   await connectDatabase(mongoUri);
   app.listen(port, () => console.log(`API listening on ${port}`));
 }
+
 if (process.env.NODE_ENV !== "test") {
   start().catch((err) => {
     console.error("Failed to start server", err);

@@ -40,6 +40,10 @@ jobs:
 
   server:
     name: Server Tests
+    env:
+      GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ vars.GOOGLE_CLIENT_SECRET }}
+      SESSION_SECRET: ${{ vars.SESSION_SECRET }}
     runs-on: ubuntu-latest
     defaults:
       run:
