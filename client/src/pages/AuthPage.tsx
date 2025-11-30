@@ -63,9 +63,9 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
   const copy = AUTH_COPY[mode]
   const isLogin = mode === 'login'
   const primaryButtonClasses =
-    'w-full rounded-full bg-motion-yellow py-2 text-[28px] font-semibold text-motion-plum shadow-[0_4px_2px_rgba(0,0,0,0.15)] transition duration-150 hover:border hover:border-[#4B0082] hover:shadow-[0_6px_10px_rgba(75,0,130,0.25)] active:border-[#EC6504] active:bg-[#EC6504] active:text-white'
+    'w-full rounded-full border-2 border-transparent bg-motion-yellow py-2 text-[28px] font-semibold text-motion-plum shadow-[0_4px_2px_rgba(0,0,0,0.15)] transition duration-150 hover:border-[#4B0082] hover:shadow-[0_6px_10px_rgba(75,0,130,0.25)] active:border-[#EC6504] active:bg-[#EC6504] active:text-white'
   const secondaryButtonClasses =
-    'w-full rounded-full border border-motion-plum bg-white py-2 text-[28px] font-semibold text-motion-plum shadow-[0_4px_8px_rgba(0,0,0,0.15)] transition duration-150 hover:border-[#d9d9d9] hover:bg-[#d9d9d9] active:border-black active:bg-black active:text-white'
+    'w-full rounded-full border-2 border-motion-plum bg-white py-2 text-[28px] font-semibold text-motion-plum shadow-[0_4px_8px_rgba(0,0,0,0.15)] transition duration-150 hover:border-[#d9d9d9] hover:bg-[#d9d9d9] active:border-black active:bg-black active:text-white'
   const initialState = useMemo(
     () =>
       copy.fields.reduce<Record<string, string>>((acc, field) => {
@@ -92,20 +92,20 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
   }
 
   const formContent = (
-    <div className="w-full max-w-3xl px-8 font-[Inter]">
+    <div className={`w-full ${isLogin ? 'max-w-3xl' : 'max-w-xl'} px-8 font-[Inter]`}>
       {/* Auth form title */}
       <div className="mb-4 text-center">
         <h2 className="text-[44px] font-bold leading-tight text-motion-plum">{copy.title}</h2>
       </div>
 
       {/* Auth form fields */}
-      <form
-        onSubmit={handleSubmit}
-        className={`${isLogin ? 'mt-10 space-y-8' : 'mt-14 space-y-10'}`}
-      >
+      <form onSubmit={handleSubmit} className={`${isLogin ? 'mt-10 space-y-8' : 'mt-6 space-y-6'}`}>
         {copy.fields.map((field) => (
           /* Individual input */
-          <div key={field.name} className="rounded-[12px] border border-[#f0ebff] bg-white px-5 py-3 shadow-[0_4px_2px_rgba(0,0,0,0.15)]">
+          <div
+            key={field.name}
+            className="rounded-[12px] border border-[#f0ebff] bg-white px-5 py-3 shadow-[0_4px_2px_rgba(0,0,0,0.15)] transition-colors focus-within:border-[#5F0589] focus-within:shadow-[0_6px_12px_rgba(95,5,137,0.25)]"
+          >
             <div className="flex items-center gap-2.5 text-[#3F3A46] text-[20px]">
               <span aria-hidden>
                 {field.icon}
@@ -141,7 +141,7 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
         )}
 
         {/* Primary submit button */}
-        <button type="submit" className={`${primaryButtonClasses} ${isLogin ? 'mt-6' : 'mt-10'}`}>
+        <button type="submit" className={`${primaryButtonClasses} ${isLogin ? 'mt-6' : 'mt-8'}`}>
           {copy.submitLabel}
         </button>
 
@@ -207,11 +207,11 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-[#f8f3ff] to-[#f0e7ff] px-4 py-20 font-[Inter] text-motion-plum">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-[#f8f3ff] to-[#f0e7ff] px-4 py-12 font-[Inter] text-motion-plum">
       {/* Decorative rails for register layout */}
       <div className="absolute inset-y-0 left-0 hidden w-52 bg-motion-purple md:block" aria-hidden />
       <div className="absolute inset-y-0 right-0 hidden w-52 bg-motion-purple md:block" aria-hidden />
-      <div className="relative z-10 w-full max-w-3xl">{formContent}</div>
+      <div className="relative z-10 w-full max-w-xl">{formContent}</div>
     </div>
   )
 }
