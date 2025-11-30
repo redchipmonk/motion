@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { User } from "../models/user";
+import { User, UserDocument } from "../models/user";
 
 if (process.env.NODE_ENV !== "test") {
   const clientID = process.env.GOOGLE_CLIENT_ID;
@@ -35,10 +35,14 @@ if (process.env.NODE_ENV !== "test") {
   );
 }
 
-passport.serializeUser((user: unknown, done) => {
-  done(null, user);
+passport.serializeUser((user: Express.User, done) => {
+  const u = user as UserDocument;
+  done(null, u._id.toString());
 });
 
-passport.deserializeUser((user: unknown, done) => {
-  done(null, user as Express.User | null);
+passport.deserializeUser((id: string, done) => {
+  User.findById(id)
+    .then(user => done(null, user))
+    .catch(err => done(err as Error));
 });
+

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { eventService, CreateEventInput, UpdateEventInput } from "../services/eventService";
+import { UserDocument } from "../models/user";
 
 const eventsRouter = Router();
 
@@ -31,7 +32,7 @@ const isCreateEventBody = (body: Partial<CreateEventBody> | undefined): body is 
   isString(body.dateTime) &&
   isValidLocation(body.location) &&
   isString(body.visibility) &&
-  isString(body.createdBy) &&
+  //isString(body.createdBy) &&
   (!body.images || (Array.isArray(body.images) && body.images.every((img) => isString(img)))) &&
   (!body.tags || (Array.isArray(body.tags) && body.tags.every((tag) => isString(tag)))) &&
   (body.price === undefined || typeof body.price === "number");
@@ -92,6 +93,11 @@ eventsRouter.post("/", async (req, res, next) => {
       return res.status(400).json({ error: "Invalid dateTime value" });
     }
 
+    // need to check that req.user exists
+    if (!req.user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
     const event = await eventService.createEvent({
       title: body.title,
       description: body.description,
@@ -101,7 +107,7 @@ eventsRouter.post("/", async (req, res, next) => {
       images: body.images,
       price: body.price,
       tags: body.tags,
-      createdBy: body.createdBy,
+      createdBy: (req.user as UserDocument)._id
     });
 
     return res.status(201).json(event);

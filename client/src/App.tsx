@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, NavLink } from 'react-router-dom'
 import AuthPage from './pages/AuthPage'
 import { useAuth } from './hooks/useAuth'
+import CreateEventForm from "./components/CreateEventForm";
 
 const NAV_LINKS = [
   { label: 'All Events', path: '/events' },
@@ -130,6 +131,10 @@ const AddEventPage = () => (
   <section className="space-y-4 rounded-3xl bg-white p-8 shadow-card">
     <h1 className="text-3xl font-bold">Add / Edit Event</h1>
     <p className="text-motion-plum/70">Build the multi-field event form here.</p>
+     <div>
+      <h1>Create Event</h1>
+      <CreateEventForm />
+    </div>
   </section>
 )
 
