@@ -2,6 +2,14 @@ import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import App from "./App";
 
+vi.mock('./hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: null,
+    loading: false,
+    logout: vi.fn(),
+  }),
+}))
+
 describe("App", () => {
   it("renders the upcoming events heading on the default route", () => {
     render(<App />);

@@ -1,4 +1,3 @@
-// src/hooks/useAuth.ts
 import { useEffect, useState } from 'react'
 
 interface User {
@@ -33,7 +32,6 @@ export const useAuth = () => {
       credentials: 'include',
     })
     setUser(null)
-    window.location.href = '/login'
   }
 
   return { user, loading, loginWithGoogle, logout }
