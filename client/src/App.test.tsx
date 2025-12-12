@@ -8,8 +8,8 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: /upcoming events/i })).toBeInTheDocument();
   });
 
-  it("includes a sign-in button in the header", () => {
+  it("includes a sign-out button in the header", () => {
     render(<App />);
-    expect(screen.getByRole("link", { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
   });
 });
