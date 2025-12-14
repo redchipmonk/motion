@@ -1,5 +1,5 @@
 const palette = {
-  primaryPurple: '#5F0589',
+  purple: '#5F0589',
   deepPurple: '#301071',
   lilac: '#D5B2FF',
   lavender: '#E9DDFF',
@@ -7,7 +7,8 @@ const palette = {
   warmWhite: '#F9F6FF',
   yellow: '#FFD446',
   yellowShadow: '#F2C321',
-  navLink: '#FFC531',
+  gold: '#FFC531',
+  plum: '#1E1338',
 }
 
 const fontSizeClass = (px: number) => `text-[${px}px]`
@@ -43,7 +44,7 @@ export const motionTheme = {
   text: {
     field: 'text-[#3F3A46]',
     helper: 'text-[#4A4359]',
-    accent: `text-[${palette.primaryPurple}]`,
+    accent: 'text-motion-purple',
     placeholder: 'placeholder:text-[#7E7A88]',
   },
   borders: {
@@ -60,38 +61,38 @@ export const motionTheme = {
     navFocusRing: 'focus:shadow-[0_0_0_2px_rgba(124,45,210,0.35)]',
   },
   states: {
-    primaryHoverBorder: 'hover:border-[#4B0082]',
-    primaryActiveBorder: `active:border-[${palette.orange}]`,
-    primaryActiveBg: `active:bg-[${palette.orange}]`,
+    primaryHoverBorder: 'hover:border-motion-deepPurple',
+    primaryActiveBorder: 'active:border-motion-orange',
+    primaryActiveBg: 'active:bg-motion-orange',
     primaryActiveText: 'active:text-white',
     secondaryHoverBorder: 'hover:border-[#d9d9d9]',
     secondaryHoverBg: 'hover:bg-[#d9d9d9]',
     secondaryActiveBorder: 'active:border-black',
     secondaryActiveBg: 'active:bg-black',
     secondaryActiveText: 'active:text-white',
-    formFocusBorder: `focus-within:border-[${palette.primaryPurple}]`,
+    formFocusBorder: 'focus-within:border-motion-purple',
     navInputFocusBorder: '',
-    navIconFocus: `group-focus-within:text-[${palette.primaryPurple}]`,
+    navIconFocus: 'group-focus-within:text-motion-purple',
     navLinkHover: 'hover:text-white',
-    navSignOutActiveBg: `active:bg-[${palette.orange}]`,
+    navSignOutActiveBg: 'active:bg-motion-orange',
     navSignOutActiveText: 'active:text-white',
   },
   nav: {
-    background: `bg-[${palette.primaryPurple}]`,
-    link: `text-[${palette.navLink}]`,
-    signOutBg: `bg-[${palette.yellow}]`,
+    background: 'bg-motion-purple',
+    link: 'text-motion-gold',
+    signOutBg: 'bg-motion-yellow',
   },
   gradients: {
     authBackgroundFrom: 'from-[#f8f3ff]',
     authBackgroundTo: 'to-[#f0e7ff]',
   },
   accents: {
-    orangeCircle: `bg-[${palette.orange}]`,
-    lilacCircle: 'bg-[#D7C0FF]',
-    deepPurple: `bg-[${palette.deepPurple}]`,
-    pastelLilac: `bg-[${palette.lilac}]`,
-    pastelLavender: `bg-[${palette.lavender}]`,
-    warmWhite: `bg-[${palette.warmWhite}]`,
+    orangeCircle: 'bg-motion-orange',
+    lilacCircle: 'bg-motion-lilac',
+    deepPurple: 'bg-motion-deepPurple',
+    pastelLilac: 'bg-motion-lilac',
+    pastelLavender: 'bg-motion-lavender',
+    warmWhite: 'bg-motion-warmWhite',
   },
 }
 
