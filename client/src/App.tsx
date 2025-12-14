@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import AuthPage from './pages/AuthPage'
 import NavBar from './components/NavBar'
+import EventFeedList from './components/EventFeedList'
 
 const App = () => (
   <BrowserRouter>
@@ -21,22 +22,28 @@ const App = () => (
 )
 
 const AppLayout = () => (
-  <div className="flex min-h-screen flex-col bg-motion-lavender text-motion-plum">
+  <div className="flex h-screen flex-col overflow-hidden bg-motion-lavender text-motion-plum">
     <NavBar />
-    <main className="flex-1 px-6 py-6 md:px-12 md:py-10">
-      <Outlet />
+    <main className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0">
+        <Outlet />
+      </div>
     </main>
   </div>
 )
 
 const EventFeedPage = () => (
-  <section className="grid gap-6 rounded-3xl bg-white p-8 shadow-card md:grid-cols-[minmax(320px,420px)_minmax(260px,1fr)]">
-    <div className="rounded-3xl border border-dashed border-motion-plum/20 bg-motion-lavender p-6">
-      <h2 className="text-2xl font-semibold">Upcoming Events</h2>
-      <p className="text-motion-plum/70">Render event cards here.</p>
+  <section className="relative h-full min-h-0 overflow-hidden">
+    <div className="absolute inset-0">
+      <div className="h-full w-full bg-motion-lavender">
+        <div className="flex h-full w-full items-start justify-start p-6 text-motion-plum/60">
+          Map component placeholder
+        </div>
+      </div>
     </div>
-    <div className="rounded-3xl border border-dashed border-motion-plum/20 bg-motion-lavender p-6 text-motion-plum/70">
-      Map component placeholder
+
+    <div className="absolute inset-y-0 left-0 w-1/2 min-h-0">
+      <EventFeedList />
     </div>
   </section>
 )
