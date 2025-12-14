@@ -1,11 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet, NavLink } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import AuthPage from './pages/AuthPage'
-
-const NAV_LINKS = [
-  { label: 'All Events', path: '/events' },
-  { label: 'My Events', path: '/my-events' },
-  { label: 'Profile', path: '/profile' },
-]
+import NavBar from './components/NavBar'
 
 const App = () => (
   <BrowserRouter>
@@ -27,41 +22,11 @@ const App = () => (
 
 const AppLayout = () => (
   <div className="flex min-h-screen flex-col bg-motion-lavender text-motion-plum">
-    <PrimaryHeader />
+    <NavBar />
     <main className="flex-1 px-6 py-6 md:px-12 md:py-10">
       <Outlet />
     </main>
   </div>
-)
-
-const PrimaryHeader = () => (
-  <header className="grid gap-4 bg-[#470085] px-6 py-4 text-white md:grid-cols-[auto,minmax(220px,1fr),auto,auto] md:items-center md:px-12">
-    <div className="text-xl font-bold">Motion</div>
-    <div>
-      <input
-        type="search"
-        placeholder="Search for users/events..."
-        aria-label="Search"
-        className="w-full rounded-full border-none px-4 py-2 text-motion-plum outline-none"
-      />
-    </div>
-    <nav className="flex gap-3 text-sm font-medium">
-      {NAV_LINKS.map(({ label, path }) => (
-        <NavLink
-          key={path}
-          to={path}
-          className={({ isActive }) =>
-            `rounded-full px-3 py-1 transition ${isActive ? 'bg-white/25 text-white' : 'text-white/80 hover:text-white'}`
-          }
-        >
-          {label}
-        </NavLink>
-      ))}
-    </nav>
-    <a className="rounded-full bg-motion-yellow px-5 py-2 text-sm font-semibold text-motion-plum" href="/login">
-      Sign In
-    </a>
-  </header>
 )
 
 const EventFeedPage = () => (

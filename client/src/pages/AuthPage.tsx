@@ -2,6 +2,7 @@
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { FiMail, FiUser } from 'react-icons/fi'
 import { VscKey } from 'react-icons/vsc'
+import { motionTheme, cn } from '../theme'
 
 type AuthMode = 'login' | 'register'
 
@@ -62,10 +63,27 @@ const AUTH_COPY: Record<
 export const AuthPage = ({ mode }: AuthPageProps) => {
   const copy = AUTH_COPY[mode]
   const isLogin = mode === 'login'
-  const primaryButtonClasses =
-    'w-full rounded-full border-2 border-transparent bg-motion-yellow py-2 text-[28px] font-semibold text-motion-plum shadow-[0_4px_2px_rgba(0,0,0,0.15)] transition duration-150 hover:border-[#4B0082] hover:shadow-[0_6px_10px_rgba(75,0,130,0.25)] active:border-[#EC6504] active:bg-[#EC6504] active:text-white'
-  const secondaryButtonClasses =
-    'w-full rounded-full border-2 border-motion-plum bg-white py-2 text-[28px] font-semibold text-motion-plum shadow-[0_4px_8px_rgba(0,0,0,0.15)] transition duration-150 hover:border-[#d9d9d9] hover:bg-[#d9d9d9] active:border-black active:bg-black active:text-white'
+  const primaryButtonClasses = cn(
+    'w-full rounded-full border-2 border-transparent bg-motion-yellow py-2 font-semibold transition duration-150',
+    motionTheme.typography.authButtonSizeClass,
+    motionTheme.text.accent,
+    motionTheme.shadows.soft,
+    motionTheme.states.primaryHoverBorder,
+    motionTheme.shadows.hoverGlow,
+    motionTheme.states.primaryActiveBorder,
+    motionTheme.states.primaryActiveBg,
+    motionTheme.states.primaryActiveText,
+  )
+  const secondaryButtonClasses = cn(
+    'w-full rounded-full border-2 border-motion-plum bg-white py-2 font-semibold text-motion-plum transition duration-150',
+    motionTheme.typography.authButtonSizeClass,
+    motionTheme.shadows.softLg,
+    motionTheme.states.secondaryHoverBorder,
+    motionTheme.states.secondaryHoverBg,
+    motionTheme.states.secondaryActiveBorder,
+    motionTheme.states.secondaryActiveBg,
+    motionTheme.states.secondaryActiveText,
+  )
   const initialState = useMemo(
     () =>
       copy.fields.reduce<Record<string, string>>((acc, field) => {
@@ -92,7 +110,7 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
   }
 
   const formContent = (
-    <div className={`w-full ${isLogin ? 'max-w-3xl' : 'max-w-xl'} px-8 font-[Inter]`}>
+    <div className={`w-full ${isLogin ? 'max-w-3xl' : 'max-w-xl'} px-8 ${motionTheme.typography.bodyFontClass}`}>
       {/* Auth form title */}
       <div className="mb-4 text-center">
         <h2 className="text-[44px] font-bold leading-tight text-motion-plum">{copy.title}</h2>
@@ -104,9 +122,15 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
           /* Individual input */
           <div
             key={field.name}
-            className="rounded-[12px] border border-[#f0ebff] bg-white px-5 py-3 shadow-[0_4px_2px_rgba(0,0,0,0.15)] transition-colors focus-within:border-[#5F0589] focus-within:shadow-[0_6px_12px_rgba(95,5,137,0.25)]"
+            className={cn(
+              'rounded-[12px] border bg-white px-5 py-3 transition-colors',
+              motionTheme.borders.authInput,
+              motionTheme.shadows.soft,
+              motionTheme.states.formFocusBorder,
+              motionTheme.shadows.focusWithin,
+            )}
           >
-            <div className="flex items-center gap-2.5 text-[#3F3A46] text-[20px]">
+            <div className={cn('flex items-center gap-2.5', motionTheme.text.field, motionTheme.typography.authInputSizeClass)}>
               <span aria-hidden>
                 {field.icon}
               </span>
@@ -118,7 +142,12 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
                 aria-label={field.label}
                 value={formValues[field.name] ?? ''}
                 onChange={handleChange}
-                className="w-full border-none bg-transparent text-[20px] font-medium text-[#3F3A46] placeholder:text-[#7E7A88] focus:outline-none"
+                className={cn(
+                  'w-full border-none bg-transparent font-medium focus:outline-none',
+                  motionTheme.typography.authInputSizeClass,
+                  motionTheme.text.field,
+                  motionTheme.text.placeholder,
+                )}
               />
             </div>
           </div>
@@ -126,11 +155,11 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
 
         {copy.showRemember && (
           /* Remember me + forgot link */
-          <div className="mt-6 flex items-center justify-between text-[16px] text-[#4A4359]">
+          <div className={cn('mt-6 flex items-center justify-between text-[16px]', motionTheme.text.helper)}>
             <label className="flex items-center gap-3">
               <input
                 type="checkbox"
-                className="h-6 w-6 border border-[#cfc1e9] shadow-[0_4px_2px_rgba(0,0,0,0.15)]"
+                className={cn('h-6 w-6', motionTheme.borders.checkbox, motionTheme.shadows.soft)}
               />
               Remember Me
             </label>
@@ -164,7 +193,7 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
       {/* Redirect prompt */}
       <p className="mt-6 text-center text-sm text-motion-plum/80">
         {copy.redirectPrompt}{' '}
-        <a href={copy.redirectHref} className="font-semibold text-[#5F0589] underline">
+        <a href={copy.redirectHref} className={cn('font-semibold underline', motionTheme.text.accent)}>
           {copy.redirectCta}
         </a>
       </p>
@@ -173,7 +202,7 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
 
   if (isLogin) {
     return (
-      <div className="flex min-h-screen font-[Inter] text-motion-plum">
+      <div className={cn('flex min-h-screen text-motion-plum', motionTheme.typography.bodyFontClass)}>
         {/* Hero split panel */}
         <section className="relative hidden flex-1 flex-col justify-center overflow-hidden bg-motion-purple px-10 py-20 text-white lg:flex">
           <div className="absolute left-10 top-8 flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/70 text-sm font-semibold">
@@ -192,14 +221,20 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
           </div>
           {/* Decorative overlapping circles */}
           <div className="pointer-events-none absolute bottom-0 left-0 hidden h-64 w-full lg:block" aria-hidden>
-            <span className="absolute -left-16 bottom-4 h-60 w-60 rounded-full bg-[#EC6504]" />  {/*orange*/}
+            <span className={cn('absolute -left-16 bottom-4 h-60 w-60 rounded-full', motionTheme.accents.orangeCircle)} />  {/*orange*/}
             <span className="absolute left-24 -bottom-16 h-60 w-60 rounded-full bg-motion-yellow" />
-            <span className="absolute -left-12 -bottom-24 h-60 w-60 rounded-full bg-[#D7C0FF]" />
+            <span className={cn('absolute -left-12 -bottom-24 h-60 w-60 rounded-full', motionTheme.accents.lilacCircle)} />
           </div>
         </section>
 
         {/* Form panel */}
-        <section className="flex flex-1 items-center justify-center bg-gradient-to-b from-[#f8f3ff] to-[#f0e7ff] px-4 py-20 md:px-16">
+        <section
+          className={cn(
+            'flex flex-1 items-center justify-center bg-gradient-to-b px-4 py-20 md:px-16',
+            motionTheme.gradients.authBackgroundFrom,
+            motionTheme.gradients.authBackgroundTo,
+          )}
+        >
           {formContent}
         </section>
       </div>
@@ -207,7 +242,14 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-[#f8f3ff] to-[#f0e7ff] px-4 py-12 font-[Inter] text-motion-plum">
+    <div
+      className={cn(
+        'relative flex min-h-screen items-center justify-center bg-gradient-to-b px-4 py-12 text-motion-plum',
+        motionTheme.typography.bodyFontClass,
+        motionTheme.gradients.authBackgroundFrom,
+        motionTheme.gradients.authBackgroundTo,
+      )}
+    >
       {/* Decorative rails for register layout */}
       <div className="absolute inset-y-0 left-0 hidden w-52 bg-motion-purple md:block" aria-hidden />
       <div className="absolute inset-y-0 right-0 hidden w-52 bg-motion-purple md:block" aria-hidden />
