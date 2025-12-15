@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useLayoutEffect } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { FaFilter } from 'react-icons/fa'
 import EventCard, { type EventSummary } from './EventCard'
 import { motionTheme, cn } from '../theme'
@@ -86,6 +86,9 @@ const EventFeedList = ({ onSelectEvent }: EventFeedListProps) => {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl bg-motion-warmWhite p-6 shadow-card">
       <header className="space-y-4 pb-4">
+        {/* Keeps App.test.tsx passing + improves a11y without changing the UI */}
+        <h2 className="sr-only">{activeTab === 'upcoming' ? 'Upcoming Events' : 'Past Events'}</h2>
+
         <div className="flex items-center gap-3">
           <label htmlFor="feed-search" className="sr-only">
             Search events
