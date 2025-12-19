@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
 import { cn } from '../theme'
 
 export type EventSummary = {
@@ -31,19 +31,31 @@ const VARIANT_STYLES: Record<EventCardVariant, string> = {
 const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: EventCardProps) => {
   const { id, title, host, datetime, distance, tags = [], heroImageUrl } = event
 
+  const handleActivate = () => onSelect?.(id)
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleActivate()
+    }
+  }
+
   return (
     <article
+      role="button"
+      tabIndex={0}
+      aria-label={`${title} hosted by ${host}`}
+      aria-pressed={isActive}
+      onClick={handleActivate}
+      onKeyDown={handleKeyDown}
       className={cn(
-        'cursor-pointer overflow-hidden transition-shadow',
+        'cursor-pointer overflow-hidden transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-motion-purple focus-visible:ring-offset-2 focus-visible:ring-offset-motion-warmWhite',
         'hover:shadow-[0_6px_10px_rgba(0,0,0,0.18)] active:border-motion-purple active:shadow-[0_6px_12px_rgba(95,5,137,0.25)]',
         VARIANT_STYLES[variant],
         isActive && 'border-motion-purple shadow-[0_6px_12px_rgba(95,5,137,0.25)]',
       )}
-      onClick={() => onSelect?.(id)}
-      aria-pressed={isActive}
     >
       <div className="relative">
-        {/* slightly taller than before */}
         <img src={heroImageUrl} alt={title} className="h-32 w-full object-cover" />
         <span className="absolute right-4 top-3 rounded-full bg-motion-orange px-3 py-1 text-xs font-semibold text-white shadow-[0_3px_8px_rgba(0,0,0,0.18)]">
           {datetime}
