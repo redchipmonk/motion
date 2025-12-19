@@ -1,5 +1,4 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { fireEvent, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import EventFeedList from './EventFeedList'
@@ -15,35 +14,37 @@ describe('EventFeedList', () => {
     nowSpy.mockRestore()
   })
 
-  it('filters events when switching between Upcoming and Past', async () => {
-    const user = userEvent.setup()
-
+  it('filters events when switching between Upcoming and Past', () => {
     render(<EventFeedList />)
 
-    // Upcoming (default) should show the future event and hide past ones
-    expect(screen.getByText(/winter showcase hosted by/i)).toBeInTheDocument()
-    expect(screen.queryByText(/bake sale hosted by/i)).not.toBeInTheDocument()
+    // With "now" set to Jan 2026: only the 2026 event is upcoming; 2025 events are past.
+    expect(screen.getAllByTestId('event-card')).toHaveLength(1)
 
-    await user.click(screen.getByRole('button', { name: /past/i }))
+    fireEvent.click(screen.getByRole('button', { name: /past/i }))
+    expect(screen.getAllByTestId('event-card')).toHaveLength(3)
 
-    // Past should show older events and hide the future one
-    expect(screen.getByText(/bake sale hosted by/i)).toBeInTheDocument()
-    expect(screen.getByText(/campus clean up hosted by/i)).toBeInTheDocument()
-    expect(screen.getByText(/intramural soccer finals hosted by/i)).toBeInTheDocument()
-    expect(screen.queryByText(/winter showcase hosted by/i)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /upcoming/i }))
+    expect(screen.getAllByTestId('event-card')).toHaveLength(1)
   })
 
-  it('renders past events with a date-only label including year (no time)', async () => {
-    const user = userEvent.setup()
-
+  it('shows time on Upcoming, and date+year (no time) on Past', () => {
     render(<EventFeedList />)
-    await user.click(screen.getByRole('button', { name: /past/i }))
 
-    // Old label with time should not appear
-    expect(screen.queryByText(/nov 20 · 1:00 pm/i)).not.toBeInTheDocument()
+    // Upcoming: should include a time-like marker and the middle dot separator.
+    const upcomingPills = screen.getAllByTestId('event-card-datetime')
+    expect(upcomingPills).toHaveLength(1)
+    expect(upcomingPills[0]).toHaveTextContent('·')
+    expect(upcomingPills[0]).toHaveTextContent(/\b(am|pm)\b/i)
 
-    // New label should include the year and no time
-    expect(screen.getByText('Nov 20, 2025')).toBeInTheDocument()
-    expect(screen.queryByText(/:\d{2}\s?(am|pm)/i)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /past/i }))
+
+    // Past: should include a year and should NOT include time markers or the dot separator.
+    const pastPills = screen.getAllByTestId('event-card-datetime')
+    expect(pastPills).toHaveLength(3)
+    for (const pill of pastPills) {
+      expect(pill).toHaveTextContent(/\b20\d{2}\b/)
+      expect(pill).not.toHaveTextContent('·')
+      expect(pill).not.toHaveTextContent(/\b(am|pm)\b/i)
+    }
   })
 })

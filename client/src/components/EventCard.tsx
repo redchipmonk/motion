@@ -43,6 +43,7 @@ const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: Even
 
   return (
     <article
+      data-testid="event-card"
       role="button"
       tabIndex={0}
       aria-label={`${title} hosted by ${host}`}
@@ -58,7 +59,10 @@ const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: Even
     >
       <div className="relative">
         <img src={heroImageUrl} alt={title} className="h-32 w-full object-cover" />
-        <span className="absolute right-4 top-3 rounded-full bg-motion-orange px-3 py-1 text-xs font-semibold text-white shadow-[0_3px_8px_rgba(0,0,0,0.18)]">
+        <span
+          data-testid="event-card-datetime"
+          className="absolute right-4 top-3 rounded-full bg-motion-orange px-3 py-1 text-xs font-semibold text-white shadow-[0_3px_8px_rgba(0,0,0,0.18)]"
+        >
           {datetime}
         </span>
       </div>
