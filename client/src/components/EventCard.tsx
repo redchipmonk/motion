@@ -6,6 +6,7 @@ export type EventSummary = {
   title: string
   host: string
   datetime: string
+  startsAt?: string
   distance?: string
   tags?: string[]
   heroImageUrl: string
