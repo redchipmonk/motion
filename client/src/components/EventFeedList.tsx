@@ -122,9 +122,15 @@ const EventFeedList = ({ onSelectEvent }: EventFeedListProps) => {
   const pastRef = useRef<HTMLButtonElement | null>(null)
   const [sliderStyle, setSliderStyle] = useState<{ width: number; x: number }>({ width: 0, x: 0 })
 
-  const syncSlider = () => {
+  // Keep the latest tab in a ref so the resize listener never goes stale.
+  const activeTabRef = useRef(activeTab)
+  useEffect(() => {
+    activeTabRef.current = activeTab
+  }, [activeTab])
+
+  const syncSlider = (tab: 'upcoming' | 'past' = activeTabRef.current) => {
     const container = tabsRowRef.current
-    const target = (activeTab === 'upcoming' ? upcomingRef.current : pastRef.current) ?? null
+    const target = (tab === 'upcoming' ? upcomingRef.current : pastRef.current) ?? null
     if (!container || !target) return
 
     const containerRect = container.getBoundingClientRect()
@@ -136,16 +142,15 @@ const EventFeedList = ({ onSelectEvent }: EventFeedListProps) => {
   }
 
   useLayoutEffect(() => {
-    syncSlider()
-    window.addEventListener('resize', syncSlider)
-    return () => window.removeEventListener('resize', syncSlider)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useLayoutEffect(() => {
-    syncSlider()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    syncSlider(activeTab)
   }, [activeTab])
+
+  useEffect(() => {
+    // Bind once; handler reads activeTabRef.current so it always stays in sync after resize.
+    const onResize = () => syncSlider()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   // Close filters on escape / outside click
   useEffect(() => {
@@ -282,8 +287,7 @@ const EventFeedList = ({ onSelectEvent }: EventFeedListProps) => {
         ) : (
           filteredEvents.map((event) => {
             const pastLabel = activeTab === 'past' ? formatPastDateLabel(event.startsAt) : null
-            const eventForCard: EventSummary =
-              activeTab === 'past' && pastLabel ? { ...event, datetime: pastLabel } : event
+            const eventForCard: EventSummary = activeTab === 'past' && pastLabel ? { ...event, datetime: pastLabel } : event
 
             return (
               <EventCard
