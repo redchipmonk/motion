@@ -5,6 +5,7 @@ export interface RsvpDocument extends Document {
   user: mongoose.Types.ObjectId;
   status: "going" | "interested" | "waitlist";
   notes?: string;
+  plusOnes: number;
 }
 
 const rsvpSchema = new Schema<RsvpDocument>(
@@ -13,6 +14,7 @@ const rsvpSchema = new Schema<RsvpDocument>(
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     status: { type: String, enum: ["going", "interested", "waitlist"], default: "going" },
     notes: String,
+    plusOnes: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );

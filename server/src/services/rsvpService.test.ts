@@ -1,112 +1,106 @@
-import { Types } from "mongoose";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { RsvpModel } from "../models/rsvp";
-import { RsvpService, CreateRsvpInput, UpdateRsvpInput } from "./rsvpService";
-
-type RsvpModelLike = {
-  new (doc: Record<string, unknown>): { save: () => Promise<Record<string, unknown>> };
-  findById(id: string): { exec: () => Promise<Record<string, unknown> | null> };
-  find(filter?: Record<string, unknown>): { exec: () => Promise<Record<string, unknown>[]> };
-  findByIdAndUpdate(
-    id: string,
-    updates: Record<string, unknown>,
-    options: Record<string, unknown>
-  ): { exec: () => Promise<Record<string, unknown> | null> };
-  findByIdAndDelete(id: string): { exec: () => Promise<Record<string, unknown> | null> };
-};
-
-const createRsvpModelMock = () => {
-  const saveSpy = vi.fn((doc: Record<string, unknown>) => Promise.resolve(doc));
-  const findByIdSpy = vi.fn<(id: string) => Promise<Record<string, unknown> | null>>();
-  const findSpy = vi.fn<(filter?: Record<string, unknown>) => Promise<Record<string, unknown>[]>>();
-  const updateSpy = vi.fn<
-    (id: string, updates: Record<string, unknown>) => Promise<Record<string, unknown> | null>
-  >();
-  const deleteSpy = vi.fn<(id: string) => Promise<Record<string, unknown> | null>>();
-
-  const Constructor = function (this: unknown, doc: Record<string, unknown>) {
-    return {
-      ...doc,
-      save: () => saveSpy({ ...doc, _id: "rsvp-id" }),
-    };
-  };
-
-  const model = Constructor as unknown as RsvpModelLike;
-  model.findById = (id: string) => ({ exec: () => findByIdSpy(id) });
-  model.find = (filter?: Record<string, unknown>) => ({
-    exec: () => findSpy(filter),
-  });
-  model.findByIdAndUpdate = (
-    id: string,
-    updates: Record<string, unknown>,
-    options: Record<string, unknown>
-  ) => {
-    void options;
-    return { exec: () => updateSpy(id, updates) };
-  };
-  model.findByIdAndDelete = (id: string) => ({
-    exec: () => deleteSpy(id),
-  });
-
-  return { model, saveSpy, findByIdSpy, findSpy, updateSpy, deleteSpy };
-};
+import mongoose from "mongoose";
+import { rsvpService } from "./rsvpService";
+import { Event } from "../models/event";
+import { Rsvp } from "../models/rsvp";
 
 describe("RsvpService", () => {
-  let service: RsvpService;
-  let mocks: ReturnType<typeof createRsvpModelMock>;
+  let userId: mongoose.Types.ObjectId;
+  let eventId: mongoose.Types.ObjectId;
 
-  beforeEach(() => {
-    mocks = createRsvpModelMock();
-    service = new RsvpService(mocks.model as unknown as RsvpModel);
+  beforeAll(async () => {
+    const mongoUri = process.env.MONGO_URL || "mongodb://localhost:27017/motion-test";
+    await mongoose.connect(mongoUri);
   });
 
-  it("creates an RSVP", async () => {
-    const payload: CreateRsvpInput = {
-      event: new Types.ObjectId(),
-      user: new Types.ObjectId(),
-      status: "interested",
-    };
-    const rsvp = await service.createRsvp(payload);
-    expect(rsvp._id).toBe("rsvp-id");
-    expect(mocks.saveSpy).toHaveBeenCalledWith(expect.objectContaining(payload));
+  afterAll(async () => {
+    await mongoose.connection.close();
   });
 
-  it("gets an RSVP by id", async () => {
-    mocks.findByIdSpy.mockResolvedValueOnce({ _id: "123" });
-    const rsvp = await service.getRsvpById("123");
-    expect(rsvp?._id).toBe("123");
+  beforeEach(async () => {
+    await Event.deleteMany({});
+    await Rsvp.deleteMany({});
+
+    userId = new mongoose.Types.ObjectId();
+    const event = await Event.create({
+      title: "Service Test Event",
+      description: "Testing RsvpService logic",
+      dateTime: new Date(),
+      location: { address: "123 Service St", coordinates: [0, 0] },
+      visibility: "public",
+      createdBy: userId,
+      status: "published",
+    });
+    eventId = event._id;
   });
 
-  it("lists RSVPs", async () => {
-    mocks.findSpy.mockResolvedValueOnce([{ _id: "1" }]);
-    const list = await service.listRsvps();
-    expect(list).toHaveLength(1);
+  describe("createRsvp", () => {
+    it("should increment participantCount and set status to 'going'", async () => {
+      const rsvp = await rsvpService.createRsvp({
+        event: eventId,
+        user: userId,
+        status: "going",
+        plusOnes: 2,
+      });
+
+      expect(rsvp.status).toBe("going");
+      const updatedEvent = await Event.findById(eventId);
+      expect(updatedEvent?.participantCount).toBe(3); // 1 user + 2 plusOnes
+    });
+
+    it("should move to waitlist if capacity is exceeded", async () => {
+      await Event.findByIdAndUpdate(eventId, { capacity: 2 });
+
+      const rsvp = await rsvpService.createRsvp({
+        event: eventId,
+        user: userId,
+        status: "going",
+        plusOnes: 5, // Total 6, capacity 2
+      });
+
+      expect(rsvp.status).toBe("waitlist");
+      expect(rsvp.plusOnes).toBe(0);
+      const updatedEvent = await Event.findById(eventId);
+      expect(updatedEvent?.participantCount).toBe(0);
+    });
   });
 
-  it("lists RSVPs by event", async () => {
-    mocks.findSpy.mockResolvedValueOnce([{ _id: "1" }]);
-    const list = await service.listRsvpsByEvent("event");
-    expect(list).toHaveLength(1);
-    expect(mocks.findSpy).toHaveBeenCalledWith({ event: "event" });
+  describe("updateRsvp", () => {
+    it("should handle participantCount diffs when updating plusOnes", async () => {
+      const rsvp = await rsvpService.createRsvp({
+        event: eventId,
+        user: userId,
+        status: "going",
+        plusOnes: 1,
+      });
+
+      // Change plusOnes from 1 to 3 (+2 net increase)
+      await rsvpService.updateRsvp(rsvp._id.toString(), { plusOnes: 3 });
+
+      const updatedEvent = await Event.findById(eventId);
+      expect(updatedEvent?.participantCount).toBe(4); // 1 user + 3 plusOnes
+    });
+
+    it("should decrement count when changing status from 'going' to 'interested'", async () => {
+      const rsvp = await rsvpService.createRsvp({ event: eventId, user: userId, status: "going" });
+      await rsvpService.updateRsvp(rsvp._id.toString(), { status: "interested" });
+
+      const updatedEvent = await Event.findById(eventId);
+      expect(updatedEvent?.participantCount).toBe(0);
+    });
   });
 
-  it("lists RSVPs by user", async () => {
-    mocks.findSpy.mockResolvedValueOnce([{ _id: "1" }]);
-    const list = await service.listRsvpsByUser("user");
-    expect(list).toHaveLength(1);
-    expect(mocks.findSpy).toHaveBeenCalledWith({ user: "user" });
-  });
+  describe("deleteRsvp", () => {
+    it("should decrement participantCount when a 'going' RSVP is deleted", async () => {
+      const rsvp = await rsvpService.createRsvp({
+        event: eventId,
+        user: userId,
+        status: "going",
+        plusOnes: 1,
+      });
+      await rsvpService.deleteRsvp(rsvp._id.toString());
 
-  it("updates an RSVP", async () => {
-    const updates: UpdateRsvpInput = { status: "going" };
-    mocks.updateSpy.mockResolvedValueOnce({ _id: "1", status: "going" });
-    const rsvp = await service.updateRsvp("1", updates);
-    expect(rsvp?.status).toBe("going");
-  });
-
-  it("deletes an RSVP", async () => {
-    mocks.deleteSpy.mockResolvedValueOnce({ acknowledged: true });
-    const deleted = await service.deleteRsvp("1");
-    expect(deleted).toEqual({ acknowledged: true });
+      const updatedEvent = await Event.findById(eventId);
+      expect(updatedEvent?.participantCount).toBe(0);
+    });
   });
 });
