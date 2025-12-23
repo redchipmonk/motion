@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { RsvpService } from "./rsvpService";
 import { Event } from "../models/event";
 import type { RsvpModel } from "../models/rsvp";
@@ -9,8 +9,15 @@ vi.mock("../models/event", () => ({
   Event: {
     findOneAndUpdate: vi.fn(),
     findByIdAndUpdate: vi.fn(),
+    findById: vi.fn(),
   },
 }));
+
+const mockedEvent = {
+  findOneAndUpdate: (Event as unknown as { findOneAndUpdate: Mock }).findOneAndUpdate,
+  findByIdAndUpdate: (Event as unknown as { findByIdAndUpdate: Mock }).findByIdAndUpdate,
+  findById: (Event as unknown as { findById: Mock }).findById,
+};
 
 const createRsvpModelMock = () => {
   const saveSpy = vi.fn((doc) => Promise.resolve(doc));
@@ -71,7 +78,10 @@ describe("RsvpService", () => {
   describe("createRsvp", () => {
     it("should increment participantCount and set status to 'going'", async () => {
       // Mock Event.findOneAndUpdate to return a document (success)
-      (Event.findOneAndUpdate as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ _id: eventId } as unknown as null);
+      mockedEvent.findById.mockResolvedValue({
+        createdBy: new mongoose.Types.ObjectId(), // Different user
+      });
+      mockedEvent.findOneAndUpdate.mockResolvedValue({ _id: eventId });
 
       const payload = {
         event: eventId,
@@ -84,7 +94,7 @@ describe("RsvpService", () => {
 
       expect(result.status).toBe("going");
       expect(rsvpMocks.saveSpy).toHaveBeenCalled();
-      expect(vi.mocked(Event).findOneAndUpdate).toHaveBeenCalledWith(
+      expect(mockedEvent.findOneAndUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ _id: eventId }),
         { $inc: { participantCount: 3 } } // 1 user + 2 plusOnes
       );
@@ -92,7 +102,10 @@ describe("RsvpService", () => {
 
     it("should move to waitlist if capacity is exceeded", async () => {
       // Mock Event.findOneAndUpdate to return null (capacity reached)
-      (Event.findOneAndUpdate as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      mockedEvent.findById.mockResolvedValue({
+        createdBy: new mongoose.Types.ObjectId(), // Different user
+      });
+      mockedEvent.findOneAndUpdate.mockResolvedValue(null);
 
       const payload = {
         event: eventId,
@@ -107,6 +120,48 @@ describe("RsvpService", () => {
       expect(result.plusOnes).toBe(0);
       expect(rsvpMocks.saveSpy).toHaveBeenCalled();
     });
+
+    it("should rollback participantCount if RSVP save fails", async () => {
+      // Mock Event update success (increment happens first)
+      mockedEvent.findById.mockResolvedValue({
+        createdBy: new mongoose.Types.ObjectId(), // Different user
+      });
+      mockedEvent.findOneAndUpdate.mockResolvedValue({ _id: eventId });
+
+      // Mock RSVP save failure
+      const error = new Error("Database error");
+      rsvpMocks.saveSpy.mockRejectedValue(error);
+
+      const payload = {
+        event: eventId,
+        user: userId,
+        status: "going" as const,
+        plusOnes: 0,
+      };
+
+      await expect(service.createRsvp(payload)).rejects.toThrow("Database error");
+
+      // Verify rollback happened (decrement)
+      expect(mockedEvent.findByIdAndUpdate).toHaveBeenCalledWith(
+        eventId,
+        { $inc: { participantCount: -1 } }
+      );
+    });
+
+    it("should prevent host from RSVPing to their own event", async () => {
+      mockedEvent.findById.mockResolvedValue({
+        createdBy: userId, // Same as user
+      });
+
+      const payload = {
+        event: eventId,
+        user: userId,
+        status: "going" as const,
+        plusOnes: 0,
+      };
+
+      await expect(service.createRsvp(payload)).rejects.toThrow("Hosts cannot RSVP to their own events");
+    });
   });
 
   describe("updateRsvp", () => {
@@ -120,12 +175,12 @@ describe("RsvpService", () => {
         plusOnes: 1,
       });
       rsvpMocks.findByIdSpy.mockReturnValue(existingRsvp);
-      (Event.findOneAndUpdate as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ _id: eventId } as unknown as null);
+      mockedEvent.findOneAndUpdate.mockResolvedValue({ _id: eventId });
 
       // Change plusOnes from 1 to 3 (+2 net increase)
       await service.updateRsvp(rsvpId, { plusOnes: 3 });
 
-      expect(vi.mocked(Event).findOneAndUpdate).toHaveBeenCalledWith(
+      expect(mockedEvent.findOneAndUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ _id: eventId }),
         { $inc: { participantCount: 2 } }
       );
@@ -145,7 +200,7 @@ describe("RsvpService", () => {
 
       await service.updateRsvp(rsvpId, { status: "interested" });
 
-      expect(vi.mocked(Event).findByIdAndUpdate).toHaveBeenCalledWith(eventId, {
+      expect(mockedEvent.findByIdAndUpdate).toHaveBeenCalledWith(eventId, {
         $inc: { participantCount: -1 },
       });
       expect(rsvpMocks.saveSpy).toHaveBeenCalled();
@@ -166,7 +221,7 @@ describe("RsvpService", () => {
 
       await service.deleteRsvp(rsvpId);
 
-      expect(vi.mocked(Event).findByIdAndUpdate).toHaveBeenCalledWith(eventId, {
+      expect(mockedEvent.findByIdAndUpdate).toHaveBeenCalledWith(eventId, {
         $inc: { participantCount: -2 },
       });
       expect(rsvpMocks.deleteOneSpy).toHaveBeenCalled();

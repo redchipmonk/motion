@@ -44,7 +44,15 @@ const eventSchema = new Schema<EventDocument>(
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true },
     dateTime: { type: Date, required: true },
-    endDateTime: Date,
+    endDateTime: {
+      type: Date,
+      validate: {
+        validator: function (this: EventDocument, val: Date) {
+          return !val || val > this.dateTime;
+        },
+        message: "End date must be after start date",
+      },
+    },
     capacity: { type: Number, min: 0 },
     status: {
       type: String,

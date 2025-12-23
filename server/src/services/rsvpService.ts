@@ -20,6 +20,13 @@ export class RsvpService {
   constructor(private readonly rsvpModel: RsvpModel = Rsvp) {}
 
   async createRsvp(payload: CreateRsvpInput) {
+    // Prevent hosts from RSVPing to their own events
+    const eventDoc = await Event.findById(payload.event);
+    if (!eventDoc) throw new Error("Event not found");
+    if (eventDoc.createdBy.toString() === payload.user.toString()) {
+      throw new Error("Hosts cannot RSVP to their own events");
+    }
+
     const rsvp = new this.rsvpModel(payload);
     const newVal = rsvp.status === "going" ? 1 + (rsvp.plusOnes || 0) : 0;
     let incremented = 0;

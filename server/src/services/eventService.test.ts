@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { EventModel } from "../models/event";
+import { User } from "../models/user";
 import { EventService, CreateEventInput, UpdateEventInput } from "./eventService";
 
 // Mock User model
@@ -195,6 +196,35 @@ describe("EventService", () => {
             $centerSphere: [[longitude, latitude], radiusInRadians],
           },
         },
+      })
+    );
+  });
+
+  it("applies visibility and lifecycle filters to discovery feed", async () => {
+    const userId = "user-123";
+    const followingId = "friend-456";
+
+    // Override User mock to return a specific following list
+    (User.findById as unknown as Mock).mockReturnValue({
+      select: vi.fn().mockResolvedValue({ following: [followingId] }),
+    });
+
+    mocks.findSpy.mockResolvedValueOnce([]);
+
+    await service.getDiscoveryFeed(userId, 0, 0, 10);
+
+    expect(mocks.findSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "published",
+        dateTime: { $gte: expect.any(Date) as unknown },
+        $or: [
+          { visibility: "public" },
+          {
+            visibility: "friends",
+            createdBy: { $in: [followingId] },
+          },
+          { createdBy: userId },
+        ],
       })
     );
   });

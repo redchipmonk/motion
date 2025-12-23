@@ -67,6 +67,11 @@ export class EventService {
   }
 
   async updateEvent(id: string, updates: UpdateEventInput) {
+    // Manual check for date logic if both are present in the update
+    if (updates.dateTime && updates.endDateTime && updates.endDateTime <= updates.dateTime) {
+      throw new Error("End date must be after start date");
+    }
+
     const { location, ...rest } = updates;
     const updateData: Partial<EventDocument> = { ...rest };
     if (location) {
@@ -76,7 +81,7 @@ export class EventService {
         coordinates: [location.longitude, location.latitude],
       };
     }
-    return this.eventModel.findByIdAndUpdate(id, updateData, { new: true }).exec();
+    return this.eventModel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true }).exec();
   }
 
   async deleteEvent(id: string) {
