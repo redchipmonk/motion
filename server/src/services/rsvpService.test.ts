@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { rsvpService } from "./rsvpService";
 import { RsvpService } from "./rsvpService";
 import { Event } from "../models/event";
 import type { RsvpModel } from "../models/rsvp";
