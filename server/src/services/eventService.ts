@@ -12,10 +12,8 @@ export interface CreateEventInput {
     latitude: number;
     longitude: number;
   };
-  visibility: "public" | "friends";
   images?: string[];
   price?: number;
-  tags?: string[];
   createdBy: mongoose.Types.ObjectId | string;
 }
 
@@ -25,20 +23,18 @@ export interface UpdateEventInput {
   dateTime?: Date;
   endDateTime?: Date;
   capacity?: number;
-  status?: "draft" | "published" | "cancelled" | "past";
+  status?: "published" | "past";
   location?: {
     address: string;
     latitude: number;
     longitude: number;
   };
-  visibility?: "public" | "friends";
   images?: string[];
   price?: number;
-  tags?: string[];
 }
 
 export class EventService {
-  constructor(private readonly eventModel: EventModel = Event) {}
+  constructor(private readonly eventModel: EventModel = Event) { }
 
   async createEvent(payload: CreateEventInput) {
     if (payload.endDateTime && payload.endDateTime <= payload.dateTime) {
@@ -88,25 +84,18 @@ export class EventService {
   }
 
   /**
-   * Fetches the discovery feed for a user based on location and social graph using a single aggregation pipeline.
+   * Fetches the discovery feed for a user based on location.
    *
    * Logic:
    * 1. Find events within {radiusInMiles} of the user using $geoNear.
-   * 2. Filter out drafts, cancelled, or past events.
-   * 3. Look up the user's friends from the 'friendships' collection.
-   * 4. Apply "Bouncer" logic:
-   *    - Show ALL "public" events.
-   *    - Show "friends" events ONLY if the event creator is a friend.
-   *    - Always show events created by the user themselves.
+   * 2. Filter for "published" events that haven't happened yet.
    */
   async getDiscoveryFeed(
-    userId: string,
+    userId: string, // Kept for future use or if we want to flag "my events" in the UI
     longitude: number,
     latitude: number,
     radiusInMiles: number = 10
   ) {
-    const userIdObject = new mongoose.Types.ObjectId(userId);
-
     // Earth radius is approximately 3963.2 miles
     const radiusInMeters = radiusInMiles * 1609.34;
 
@@ -127,69 +116,11 @@ export class EventService {
           dateTime: { $gte: new Date() },
         },
       },
-      // Stage 3: Look up friendships where the user is either the requester or recipient
-      {
-        $lookup: {
-          from: "friendships",
-          let: { userId: userIdObject },
-          pipeline: [
-            {
-              $match: {
-                status: "accepted",
-                $expr: {
-                  $or: [
-                    { $eq: ["$requester", "$$userId"] },
-                    { $eq: ["$recipient", "$$userId"] },
-                  ],
-                },
-              },
-            },
-            // Project the other user's ID
-            {
-              $project: {
-                friendId: {
-                  $cond: {
-                    if: { $eq: ["$requester", "$$userId"] },
-                    then: "$recipient",
-                    else: "$requester",
-                  },
-                },
-              },
-            },
-          ],
-          as: "userFriends",
-        },
-      },
-      // Stage 4: Create a field with an array of just the friend IDs
-      {
-        $addFields: {
-          friendIds: {
-            $map: {
-              input: "$userFriends",
-              as: "friend",
-              in: "$$friend.friendId",
-            },
-          },
-        },
-      },
-      // Stage 5: "Bouncer" Logic Filter
-      {
-        $match: {
-          $or: [
-            { visibility: "public" },
-            { createdBy: userIdObject },
-            {
-              "visibility": "friends",
-              "createdBy": { $in: "$friendIds" },
-            },
-          ],
-        },
-      },
-      // Stage 6: Sort by soonest first
+      // Stage 3: Sort by soonest first
       { $sort: { dateTime: 1 } },
-      // Stage 7: Pagination limit
+      // Stage 4: Pagination limit
       { $limit: 50 },
-      // Stage 8: Populate creator details
+      // Stage 5: Populate creator details
       {
         $lookup: {
           from: "users",
@@ -198,16 +129,12 @@ export class EventService {
           as: "creatorDetails",
         },
       },
-      // Stage 9: Reshape the creator data and project final fields
+      // Stage 6: Reshape the creator data and project final fields
       {
         $unwind: "$creatorDetails",
       },
       {
         $project: {
-          // Exclude helper fields and sensitive data
-          friendships: 0,
-          friendIds: 0,
-          userFriends: 0,
           "creatorDetails.password": 0,
           "creatorDetails.email": 0,
         },
