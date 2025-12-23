@@ -1,6 +1,5 @@
-import mongoose, { QueryFilter } from "mongoose";
+import mongoose, { PipelineStage } from "mongoose";
 import { Event, EventDocument, EventModel } from "../models/event";
-import { User } from "../models/user";
 
 export interface CreateEventInput {
   title: string;
@@ -62,8 +61,8 @@ export class EventService {
     return this.eventModel.findById(id).exec();
   }
 
-  async listEvents(filter: QueryFilter<EventDocument> = {}) {
-    return this.eventModel.find(filter).sort({ dateTime: 1 }).exec();
+  async listEvents(pipeline: PipelineStage[]) {
+    return this.eventModel.aggregate(pipeline).exec();
   }
 
   async updateEvent(id: string, updates: UpdateEventInput) {
@@ -89,14 +88,15 @@ export class EventService {
   }
 
   /**
-   * Fetches the discovery feed for a user based on location and social graph.
+   * Fetches the discovery feed for a user based on location and social graph using a single aggregation pipeline.
    *
    * Logic:
-   * 1. Find events within {radiusInMiles} of the user.
+   * 1. Find events within {radiusInMiles} of the user using $geoNear.
    * 2. Filter out drafts, cancelled, or past events.
-   * 3. Apply "Bouncer" logic:
+   * 3. Look up the user's friends from the 'friendships' collection.
+   * 4. Apply "Bouncer" logic:
    *    - Show ALL "public" events.
-   *    - Show "friends" events ONLY if the user follows the creator.
+   *    - Show "friends" events ONLY if the event creator is a friend.
    *    - Always show events created by the user themselves.
    */
   async getDiscoveryFeed(
@@ -105,40 +105,116 @@ export class EventService {
     latitude: number,
     radiusInMiles: number = 10
   ) {
-    // 1. Get the list of users the current user follows to resolve "Friends" visibility
-    const user = await User.findById(userId).select("following");
-    const followingIds = user?.following || [];
+    const userIdObject = new mongoose.Types.ObjectId(userId);
 
-    // 2. Calculate radius in radians for MongoDB $centerSphere
     // Earth radius is approximately 3963.2 miles
-    const radiusInRadians = radiusInMiles / 3963.2;
+    const radiusInMeters = radiusInMiles * 1609.34;
 
-    // 3. Execute the Discovery Query
-    const events = await this.eventModel.find({
-      // Geospatial filter: Events within radius
-      location: {
-        $geoWithin: {
-          $centerSphere: [[longitude, latitude], radiusInRadians],
+    const pipeline: PipelineStage[] = [
+      // Stage 1: Geospatial filter using $geoNear. This MUST be the first stage.
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: [longitude, latitude] },
+          distanceField: "distance",
+          maxDistance: radiusInMeters,
+          spherical: true,
         },
       },
-      // Lifecycle filters
-      status: "published",
-      dateTime: { $gte: new Date() }, // Only future events
-      // "Bouncer" Logic
-      $or: [
-        { visibility: "public" },
-        {
-          visibility: "friends",
-          createdBy: { $in: followingIds }, // I can see friends-only events if I follow the creator
+      // Stage 2: Initial lifecycle filters
+      {
+        $match: {
+          status: "published",
+          dateTime: { $gte: new Date() },
         },
-        { createdBy: userId }, // I can always see my own events
-      ],
-    })
-      .sort({ dateTime: 1 }) // Sort by soonest first
-      .limit(50) // Pagination limit for the feed
-      .populate("createdBy", "name handle profileImage userType"); // Hydrate host details
+      },
+      // Stage 3: Look up friendships where the user is either the requester or recipient
+      {
+        $lookup: {
+          from: "friendships",
+          let: { userId: userIdObject },
+          pipeline: [
+            {
+              $match: {
+                status: "accepted",
+                $expr: {
+                  $or: [
+                    { $eq: ["$requester", "$$userId"] },
+                    { $eq: ["$recipient", "$$userId"] },
+                  ],
+                },
+              },
+            },
+            // Project the other user's ID
+            {
+              $project: {
+                friendId: {
+                  $cond: {
+                    if: { $eq: ["$requester", "$$userId"] },
+                    then: "$recipient",
+                    else: "$requester",
+                  },
+                },
+              },
+            },
+          ],
+          as: "userFriends",
+        },
+      },
+      // Stage 4: Create a field with an array of just the friend IDs
+      {
+        $addFields: {
+          friendIds: {
+            $map: {
+              input: "$userFriends",
+              as: "friend",
+              in: "$$friend.friendId",
+            },
+          },
+        },
+      },
+      // Stage 5: "Bouncer" Logic Filter
+      {
+        $match: {
+          $or: [
+            { visibility: "public" },
+            { createdBy: userIdObject },
+            {
+              "visibility": "friends",
+              "createdBy": { $in: "$friendIds" },
+            },
+          ],
+        },
+      },
+      // Stage 6: Sort by soonest first
+      { $sort: { dateTime: 1 } },
+      // Stage 7: Pagination limit
+      { $limit: 50 },
+      // Stage 8: Populate creator details
+      {
+        $lookup: {
+          from: "users",
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "creatorDetails",
+        },
+      },
+      // Stage 9: Reshape the creator data and project final fields
+      {
+        $unwind: "$creatorDetails",
+      },
+      {
+        $project: {
+          // Exclude helper fields and sensitive data
+          friendships: 0,
+          friendIds: 0,
+          userFriends: 0,
+          "creatorDetails.password": 0,
+          "creatorDetails.email": 0,
+        },
+      },
+    ];
 
-    return events;
+    return this.listEvents(pipeline);
   }
 }
 
