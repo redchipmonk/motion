@@ -4,8 +4,8 @@ import type { EventModel, EventDocument } from "../models/event";
 import { EventService, CreateEventInput } from "./eventService";
 
 const setupMocks = () => {
-  const saveSpy = vi.fn<[Partial<EventDocument>], Promise<EventDocument>>();
-  const aggregateSpy = vi.fn<[PipelineStage[]], Promise<EventDocument[]>>();
+  const saveSpy = vi.fn<(doc: Partial<EventDocument>) => Promise<EventDocument>>();
+  const aggregateSpy = vi.fn<(pipeline: PipelineStage[]) => Promise<EventDocument[]>>();
 
   // Use a real class for the mock model to ensure it's a valid constructor
   class MockEventModel {
@@ -56,7 +56,7 @@ describe("EventService", () => {
       createdBy: new Types.ObjectId(),
     };
     // Mock the resolved value of the save operation
-    saveSpy.mockResolvedValue({ ...payload, _id: "new-id" } as EventDocument);
+    saveSpy.mockResolvedValue({ ...payload, _id: "new-id" } as unknown as EventDocument);
 
     await service.createEvent(payload);
 
@@ -83,7 +83,7 @@ describe("EventService", () => {
       await service.getDiscoveryFeed(userId, longitude, latitude, radiusInMiles);
 
       // Explicitly cast the mock's arguments to fix lint errors
-      const pipeline = aggregateSpy.mock.calls[0][0] as PipelineStage[];
+      const pipeline = aggregateSpy.mock.calls[0][0];
       const geoNearStage = pipeline[0] as PipelineStage.GeoNear;
 
       expect(geoNearStage.$geoNear).toBeDefined();
@@ -93,7 +93,7 @@ describe("EventService", () => {
       const { service, aggregateSpy } = setupMocks();
       aggregateSpy.mockResolvedValue([]);
       await service.getDiscoveryFeed(userId, longitude, latitude, radiusInMiles);
-      const pipeline = aggregateSpy.mock.calls[0][0] as PipelineStage[];
+      const pipeline = aggregateSpy.mock.calls[0][0];
       const matchStage = pipeline.find(
         (stage): stage is PipelineStage.Match => "$match" in stage && "status" in stage.$match
       );
@@ -104,7 +104,7 @@ describe("EventService", () => {
       const { service, aggregateSpy } = setupMocks();
       aggregateSpy.mockResolvedValue([]);
       await service.getDiscoveryFeed(userId, longitude, latitude, radiusInMiles);
-      const pipeline = aggregateSpy.mock.calls[0][0] as PipelineStage[];
+      const pipeline = aggregateSpy.mock.calls[0][0];
       const lookupStage = pipeline.find(
         (stage): stage is PipelineStage.Lookup => "$lookup" in stage && stage.$lookup.from === "friendships"
       );
@@ -115,7 +115,7 @@ describe("EventService", () => {
       const { service, aggregateSpy } = setupMocks();
       aggregateSpy.mockResolvedValue([]);
       await service.getDiscoveryFeed(userId, longitude, latitude, radiusInMiles);
-      const pipeline = aggregateSpy.mock.calls[0][0] as PipelineStage[];
+      const pipeline = aggregateSpy.mock.calls[0][0];
       const bouncerStage = pipeline.find(
         (stage): stage is PipelineStage.Match => "$match" in stage && "$or" in stage.$match
       );
@@ -126,7 +126,7 @@ describe("EventService", () => {
       const { service, aggregateSpy } = setupMocks();
       aggregateSpy.mockResolvedValue([]);
       await service.getDiscoveryFeed(userId, longitude, latitude, radiusInMiles);
-      const pipeline = aggregateSpy.mock.calls[0][0] as PipelineStage[];
+      const pipeline = aggregateSpy.mock.calls[0][0];
       const projectStage = pipeline[pipeline.length - 1] as PipelineStage.Project;
 
       expect(projectStage).toBeDefined();

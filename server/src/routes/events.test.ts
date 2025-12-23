@@ -81,10 +81,30 @@ describe("events router", () => {
       .get("/events")
       .query({ visibility: "public", createdBy: "user" });
     expect(response.status).toBe(200);
-    expect(mockedEventService.listEvents).toHaveBeenCalledWith({
-      visibility: "public",
-      createdBy: "user",
-    });
+    expect(mockedEventService.listEvents).toHaveBeenCalledWith([
+      {
+        $match: {
+          visibility: "public",
+          createdBy: "user",
+        },
+      },
+    ]);
+  });
+
+  it("lists events with a valid createdBy filter", async () => {
+    mockedEventService.listEvents.mockResolvedValueOnce([buildEvent()]);
+    const userId = new Types.ObjectId();
+    const response = await request(app)
+      .get("/events")
+      .query({ createdBy: userId.toHexString() });
+    expect(response.status).toBe(200);
+    expect(mockedEventService.listEvents).toHaveBeenCalledWith([
+      {
+        $match: {
+          createdBy: userId,
+        },
+      },
+    ]);
   });
 
   it("fetches an event by id", async () => {

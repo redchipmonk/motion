@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { Types } from "mongoose";
+import { PipelineStage, Types } from "mongoose";
 import { eventService, CreateEventInput, UpdateEventInput } from "../services/eventService";
 
 const eventsRouter = Router();
@@ -87,8 +87,26 @@ eventsRouter.post("/", async (req, res, next) => {
  */
 eventsRouter.get("/", async (req, res, next) => {
   try {
-    const filter = req.query;
-    const events = await eventService.listEvents(filter);
+    const query = req.query;
+    const pipeline: PipelineStage[] = [];
+
+    // Basic implementation to convert query params to a $match stage.
+    const match: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(query)) {
+      if (value) {
+        if (key === "createdBy" && isValidObjectId(value)) {
+          match[key] = new Types.ObjectId(value);
+        } else {
+          match[key] = value;
+        }
+      }
+    }
+
+    if (Object.keys(match).length > 0) {
+      pipeline.push({ $match: match });
+    }
+
+    const events = await eventService.listEvents(pipeline);
     return res.json(events);
   } catch (error) {
     return next(error);
