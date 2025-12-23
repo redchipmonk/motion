@@ -94,6 +94,20 @@ describe("EventService", () => {
     );
   });
 
+  it("throws error if endDateTime is before dateTime", async () => {
+    const payload: CreateEventInput = {
+      title: "Invalid Event",
+      description: "Desc",
+      dateTime: new Date("2025-01-02"),
+      endDateTime: new Date("2025-01-01"),
+      location: { address: "UW", latitude: 47.65, longitude: -122.3 },
+      visibility: "public",
+      createdBy: new Types.ObjectId(),
+    };
+
+    await expect(service.createEvent(payload)).rejects.toThrow("End date must be after start date");
+  });
+
   it("gets event by id", async () => {
     mocks.findByIdSpy.mockResolvedValueOnce({ _id: "123" });
     const event = await service.getEventById("123");

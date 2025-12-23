@@ -67,12 +67,13 @@ export class EventService {
   }
 
   async updateEvent(id: string, updates: UpdateEventInput) {
-    const updateData: any = { ...updates };
-    if (updates.location) {
+    const { location, ...rest } = updates;
+    const updateData: Partial<EventDocument> = { ...rest };
+    if (location) {
       updateData.location = {
-        address: updates.location.address,
+        address: location.address,
         type: "Point",
-        coordinates: [updates.location.longitude, updates.location.latitude],
+        coordinates: [location.longitude, location.latitude],
       };
     }
     return this.eventModel.findByIdAndUpdate(id, updateData, { new: true }).exec();

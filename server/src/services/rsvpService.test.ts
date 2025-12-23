@@ -17,36 +17,39 @@ const createRsvpModelMock = () => {
   const deleteOneSpy = vi.fn().mockResolvedValue(true);
 
   // Helper to create a mock document with methods
-  const createMockDoc = (data: any) => ({
+  const createMockDoc = (data: Record<string, unknown>) => ({
     ...data,
     save: function () {
       return saveSpy(this);
     },
     deleteOne: function () {
-      return deleteOneSpy(this);
+      return deleteOneSpy(this) as Promise<boolean>;
     },
   });
 
   const findByIdSpy = vi.fn();
   const findSpy = vi.fn();
 
-  const Constructor = function (this: any, doc: any) {
+  const Constructor = function (this: Record<string, unknown>, doc: Record<string, unknown>) {
     Object.assign(this, createMockDoc(doc));
   };
 
-  const model = Constructor as any;
+  const model = Constructor as unknown as {
+    findById: (id: string) => { then: (resolve: (value: unknown) => void, reject: (reason?: unknown) => void) => Promise<void>; exec: () => Promise<unknown> };
+    find: (filter: Record<string, unknown>) => { exec: () => Promise<unknown> };
+  };
 
   // Mock findById to return a thenable + exec object
   model.findById = (id: string) => {
-    const result = findByIdSpy(id);
+    const result = findByIdSpy(id) as unknown;
     const promise = Promise.resolve(result);
     return {
-      then: (resolve: any, reject: any) => promise.then(resolve, reject),
+      then: (resolve: (value: unknown) => void, reject: (reason?: unknown) => void) => promise.then(resolve, reject),
       exec: () => promise,
     };
   };
 
-  model.find = (filter: any) => ({
+  model.find = (filter: Record<string, unknown>) => ({
     exec: () => Promise.resolve(findSpy(filter)),
   });
 
@@ -68,7 +71,7 @@ describe("RsvpService", () => {
   describe("createRsvp", () => {
     it("should increment participantCount and set status to 'going'", async () => {
       // Mock Event.findOneAndUpdate to return a document (success)
-      vi.mocked(Event.findOneAndUpdate).mockResolvedValue({ _id: eventId });
+      (Event.findOneAndUpdate as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ _id: eventId } as unknown as null);
 
       const payload = {
         event: eventId,
@@ -81,7 +84,7 @@ describe("RsvpService", () => {
 
       expect(result.status).toBe("going");
       expect(rsvpMocks.saveSpy).toHaveBeenCalled();
-      expect(Event.findOneAndUpdate).toHaveBeenCalledWith(
+      expect(vi.mocked(Event).findOneAndUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ _id: eventId }),
         { $inc: { participantCount: 3 } } // 1 user + 2 plusOnes
       );
@@ -89,7 +92,7 @@ describe("RsvpService", () => {
 
     it("should move to waitlist if capacity is exceeded", async () => {
       // Mock Event.findOneAndUpdate to return null (capacity reached)
-      vi.mocked(Event.findOneAndUpdate).mockResolvedValue(null);
+      (Event.findOneAndUpdate as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       const payload = {
         event: eventId,
@@ -117,12 +120,12 @@ describe("RsvpService", () => {
         plusOnes: 1,
       });
       rsvpMocks.findByIdSpy.mockReturnValue(existingRsvp);
-      vi.mocked(Event.findOneAndUpdate).mockResolvedValue({ _id: eventId });
+      (Event.findOneAndUpdate as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ _id: eventId } as unknown as null);
 
       // Change plusOnes from 1 to 3 (+2 net increase)
       await service.updateRsvp(rsvpId, { plusOnes: 3 });
 
-      expect(Event.findOneAndUpdate).toHaveBeenCalledWith(
+      expect(vi.mocked(Event).findOneAndUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ _id: eventId }),
         { $inc: { participantCount: 2 } }
       );
@@ -142,7 +145,7 @@ describe("RsvpService", () => {
 
       await service.updateRsvp(rsvpId, { status: "interested" });
 
-      expect(Event.findByIdAndUpdate).toHaveBeenCalledWith(eventId, {
+      expect(vi.mocked(Event).findByIdAndUpdate).toHaveBeenCalledWith(eventId, {
         $inc: { participantCount: -1 },
       });
       expect(rsvpMocks.saveSpy).toHaveBeenCalled();
@@ -163,7 +166,7 @@ describe("RsvpService", () => {
 
       await service.deleteRsvp(rsvpId);
 
-      expect(Event.findByIdAndUpdate).toHaveBeenCalledWith(eventId, {
+      expect(vi.mocked(Event).findByIdAndUpdate).toHaveBeenCalledWith(eventId, {
         $inc: { participantCount: -2 },
       });
       expect(rsvpMocks.deleteOneSpy).toHaveBeenCalled();
