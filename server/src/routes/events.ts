@@ -53,6 +53,12 @@ eventsRouter.get("/feed", async (req, res, next) => {
 eventsRouter.post("/", async (req, res, next) => {
   try {
     const body = req.body as CreateEventBody;
+    if (!body.title || !body.description || !body.dateTime || !body.location || !body.visibility || !body.createdBy) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    if (isNaN(Date.parse(body.dateTime))) {
+      return res.status(400).json({ error: "Invalid dateTime format" });
+    }
 
     // Basic payload construction (In production, use Zod/Joi for validation)
     const input: CreateEventInput = {
@@ -70,6 +76,20 @@ eventsRouter.post("/", async (req, res, next) => {
 
     const event = await eventService.createEvent(input);
     return res.status(201).json(event);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
+ * GET /events
+ * Lists events with optional filters.
+ */
+eventsRouter.get("/", async (req, res, next) => {
+  try {
+    const filter = req.query;
+    const events = await eventService.listEvents(filter);
+    return res.json(events);
   } catch (error) {
     return next(error);
   }
@@ -96,8 +116,14 @@ eventsRouter.patch("/:id", async (req, res, next) => {
     const body = req.body as UpdateEventBody;
     const { dateTime, endDateTime, ...rest } = body;
 
-    const updates: UpdateEventInput = { ...rest };
+    if (dateTime && isNaN(Date.parse(dateTime))) {
+      return res.status(400).json({ error: "Invalid dateTime format" });
+    }
+    if (endDateTime && isNaN(Date.parse(endDateTime))) {
+      return res.status(400).json({ error: "Invalid endDateTime format" });
+    }
 
+    const updates: UpdateEventInput = { ...rest };
     if (dateTime) updates.dateTime = new Date(dateTime);
     if (endDateTime) updates.endDateTime = new Date(endDateTime);
 
