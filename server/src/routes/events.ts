@@ -53,7 +53,7 @@ eventsRouter.get("/feed", async (req, res, next) => {
 eventsRouter.post("/", async (req, res, next) => {
   try {
     const body = req.body as CreateEventBody;
-    if (!body.title || !body.description || !body.dateTime || !body.location || !body.visibility || !body.createdBy) {
+    if (!body.title || !body.description || !body.dateTime || !body.location || !body.createdBy) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     if (isNaN(Date.parse(body.dateTime))) {
@@ -67,11 +67,9 @@ eventsRouter.post("/", async (req, res, next) => {
       dateTime: new Date(body.dateTime),
       endDateTime: body.endDateTime ? new Date(body.endDateTime) : undefined,
       location: body.location, // Expecting { address, latitude, longitude }
-      visibility: body.visibility,
       createdBy: body.createdBy,
       capacity: body.capacity,
       images: body.images,
-      tags: body.tags,
     };
 
     const event = await eventService.createEvent(input);
@@ -147,7 +145,7 @@ eventsRouter.patch("/:id", async (req, res, next) => {
 
     const event = await eventService.updateEvent(req.params.id, updates);
     if (!event) return res.status(404).json({ error: "Event not found" });
-    
+
     return res.json(event);
   } catch (error) {
     return next(error);

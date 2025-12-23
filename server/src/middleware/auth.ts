@@ -27,21 +27,25 @@ export const protectedRoute = async (
       token = req.headers.authorization.split(" ")[1];
 
       // Verify token
-      const decoded: any = jwt.verify(
+      const decoded = jwt.verify(
         token,
         process.env.JWT_SECRET || "default_secret"
       );
 
       // Get user from the token
-      const user = await User.findById(decoded.id).select("-password");
+      if (typeof decoded === "object" && "id" in decoded) {
+        const user = await User.findById(decoded.id).select("-password");
 
-      if (!user) {
-        res.status(401).json({ message: "Not authorized. User not found." });
-        return;
+        if (!user) {
+          res.status(401).json({ message: "Not authorized. User not found." });
+          return;
+        }
+
+        req.user = user;
+        next();
+      } else {
+        res.status(401).json({ message: "Not authorized" });
       }
-
-      req.user = user;
-      next();
     } catch (error) {
       console.error("Auth middleware error:", error);
       res.status(401).json({ message: "Not authorized" });

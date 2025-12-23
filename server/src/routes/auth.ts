@@ -4,11 +4,18 @@ import { AuthService } from "../services/authService";
 
 const router = express.Router();
 
+interface RegisterBody {
+  name: string;
+  email: string;
+  password?: string;
+  handle: string;
+}
+
 /**
  * POST /auth/register
  * Creates a new user with email/password.
  */
-router.post("/register", async (req, res): Promise<any> => {
+router.post("/register", async (req: express.Request<Record<string, never>, Record<string, never>, RegisterBody>, res: express.Response) => {
   try {
     const { name, email, password, handle } = req.body;
 
@@ -54,11 +61,16 @@ router.post("/register", async (req, res): Promise<any> => {
   }
 });
 
+interface LoginBody {
+  email: string;
+  password?: string;
+}
+
 /**
  * POST /auth/login
  * Logs in a user with email/password.
  */
-router.post("/login", async (req, res): Promise<any> => {
+router.post("/login", async (req: express.Request<Record<string, never>, Record<string, never>, LoginBody>, res: express.Response) => {
   try {
     const { email, password } = req.body;
 
@@ -92,11 +104,15 @@ router.post("/login", async (req, res): Promise<any> => {
   }
 });
 
+interface GoogleAuthBody {
+  token: string;
+}
+
 /**
  * POST /auth/google
  * Verifies Google token and logs in/registers the user.
  */
-router.post("/google", async (req, res): Promise<any> => {
+router.post("/google", async (req: express.Request<Record<string, never>, Record<string, never>, GoogleAuthBody>, res: express.Response) => {
   try {
     const { token } = req.body;
 
@@ -107,37 +123,42 @@ router.post("/google", async (req, res): Promise<any> => {
     // Verify token with Google
     const payload = await AuthService.verifyGoogleToken(token);
 
-    if (!payload.email) {
+    if (!payload.email || typeof payload.email !== "string") {
       return res.status(400).json({ message: "Google account has no email" });
     }
 
+    const email = payload.email;
+    const googleId = typeof payload.sub === "string" ? payload.sub : "";
+    const name = typeof payload.name === "string" ? payload.name : "User";
+    const picture = typeof payload.picture === "string" ? payload.picture : undefined;
+
     // Find user by googleId OR email
     let user = await User.findOne({
-      $or: [{ googleId: payload.sub }, { email: payload.email }],
+      $or: [{ googleId }, { email }],
     });
 
     if (!user) {
       // Register new user
       // We need a unique handle. Strategy: sanitize name/email + random suffix
-      const baseHandle = (payload.name || payload.email.split("@")[0])
+      const baseHandle = (name || email.split("@")[0])
         .replace(/\s+/g, "")
         .toLowerCase();
       const uniqueHandle = `${baseHandle}${Math.floor(1000 + Math.random() * 9000)}`;
 
       user = await User.create({
-        name: payload.name || "User",
-        email: payload.email,
-        googleId: payload.sub,
+        name,
+        email,
+        googleId,
         handle: uniqueHandle,
         userType: "individual",
-        profileImage: payload.picture,
+        profileImage: picture,
         // No password for Google-only users
       });
-    } else if (!user.googleId) {
+    } else if (!user.googleId && googleId) {
       // Existing user found by email, but not linked to Google yet. Link it.
-      user.googleId = payload.sub;
-      if (payload.picture && !user.profileImage) {
-        user.profileImage = payload.picture;
+      user.googleId = googleId;
+      if (picture && !user.profileImage) {
+        user.profileImage = picture;
       }
       await user.save();
     }

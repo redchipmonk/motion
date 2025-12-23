@@ -68,7 +68,7 @@ export class AuthService {
         throw new Error(`Failed to fetch user info: ${response.statusText}`);
       }
 
-      const data = await response.json() as Record<string, any>;
+      const data = await response.json() as Record<string, unknown>;
 
       return {
         ...data,

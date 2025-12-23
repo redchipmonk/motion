@@ -52,7 +52,6 @@ describe("EventService", () => {
       description: "Desc",
       dateTime: new Date(),
       location: { address: "UW", latitude: 47.65, longitude: -122.3 },
-      visibility: "public",
       createdBy: new Types.ObjectId(),
     };
     // Mock the resolved value of the save operation
@@ -100,27 +99,9 @@ describe("EventService", () => {
       expect(matchStage).toBeDefined();
     });
 
-    it("should include a $lookup stage to find user's friends", async () => {
-      const { service, aggregateSpy } = setupMocks();
-      aggregateSpy.mockResolvedValue([]);
-      await service.getDiscoveryFeed(userId, longitude, latitude, radiusInMiles);
-      const pipeline = aggregateSpy.mock.calls[0][0];
-      const lookupStage = pipeline.find(
-        (stage): stage is PipelineStage.Lookup => "$lookup" in stage && stage.$lookup.from === "friendships"
-      );
-      expect(lookupStage).toBeDefined();
-    });
 
-    it("should include a final $match stage for bouncer logic", async () => {
-      const { service, aggregateSpy } = setupMocks();
-      aggregateSpy.mockResolvedValue([]);
-      await service.getDiscoveryFeed(userId, longitude, latitude, radiusInMiles);
-      const pipeline = aggregateSpy.mock.calls[0][0];
-      const bouncerStage = pipeline.find(
-        (stage): stage is PipelineStage.Match => "$match" in stage && "$or" in stage.$match
-      );
-      expect(bouncerStage).toBeDefined();
-    });
+
+
 
     it("should project and remove sensitive/temporary fields at the end", async () => {
       const { service, aggregateSpy } = setupMocks();
@@ -130,9 +111,8 @@ describe("EventService", () => {
       const projectStage = pipeline[pipeline.length - 1] as PipelineStage.Project;
 
       expect(projectStage).toBeDefined();
-      expect(projectStage.$project?.friendIds).toBe(0);
-      expect(projectStage.$project?.userFriends).toBe(0);
       expect(projectStage.$project?.["creatorDetails.password"]).toBe(0);
+      // friendIds and userFriends are removed from projection because they are not created anymore
     });
   });
 });
