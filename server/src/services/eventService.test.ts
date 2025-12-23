@@ -38,9 +38,10 @@ const createEventModelMock = (): EventModelMock => {
   const deleteSpy = vi.fn<(id: string) => Promise<Record<string, unknown> | null>>();
 
   const Constructor = function (this: unknown, doc: Record<string, unknown>) {
+    const docWithDefaults = { images: [], tags: [], ...doc };
     return {
-      ...doc,
-      save: () => saveSpy({ ...doc, _id: "new-event" }),
+      ...docWithDefaults,
+      save: () => saveSpy({ ...docWithDefaults, _id: "new-event" }),
     };
   };
 
