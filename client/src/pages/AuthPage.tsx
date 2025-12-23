@@ -1,7 +1,8 @@
-// client/src/pages/AuthPage.tsx
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react'
 import { FiMail, FiUser } from 'react-icons/fi'
 import { VscKey } from 'react-icons/vsc'
+import { useGoogleLogin } from '@react-oauth/google'
+import { useNavigate } from 'react-router-dom'
 import { motionTheme, cn } from '../theme'
 
 type AuthMode = 'login' | 'register'
@@ -18,46 +19,46 @@ type AuthField = {
 }
 
 const AUTH_COPY: Record<
-	AuthMode,
-	{
-		title: string
-		submitLabel: string
-		redirectPrompt: string
-		redirectCta: string
-		redirectHref: string
-		secondaryAction?: { label: string; onClick?: () => void }
-		fields: AuthField[]
-		showRemember?: boolean
-		forgotHref?: string
-	}
+  AuthMode,
+  {
+    title: string
+    submitLabel: string
+    redirectPrompt: string
+    redirectCta: string
+    redirectHref: string
+    secondaryAction?: { label: string; onClick?: () => void }
+    fields: AuthField[]
+    showRemember?: boolean
+    forgotHref?: string
+  }
 > = {
-	login: {
-		title: 'Sign in',
-		submitLabel: 'Sign in',
-		redirectPrompt: "Don't have an account?",
-		redirectCta: 'Create one',
-		redirectHref: '/register',
-		fields: [
-			{ name: 'email', label: 'Username/Email Address', type: 'email', icon: <FiUser className="text-lg" /> },
-			{ name: 'password', label: 'Password', type: 'password', icon: <VscKey className="text-lg" /> },
-		],
-		showRemember: true,
-		forgotHref: '#',
-	},
-	register: {
-		title: 'Register',
-		submitLabel: 'Sign up',
-		redirectPrompt: 'Already have an account?',
-		redirectCta: 'Log in',
-		redirectHref: '/login',
-		secondaryAction: { label: 'Sign up with Google' },
-		fields: [
-			{ name: 'name', label: 'Name', icon: <FiUser className="text-lg" /> },
-			{ name: 'email', label: 'Email Address', type: 'email', icon: <FiMail className="text-lg" /> },
-			{ name: 'password', label: 'Password', type: 'password', icon: <VscKey className="text-lg" /> },
-			{ name: 'confirmPassword', label: 'Confirm Password', type: 'password', icon: <VscKey className="text-lg" /> },
-		],
-	},
+  login: {
+    title: 'Sign in',
+    submitLabel: 'Sign in',
+    redirectPrompt: "Don't have an account?",
+    redirectCta: 'Create one',
+    redirectHref: '/register',
+    fields: [
+      { name: 'email', label: 'Username/Email Address', type: 'email', icon: <FiUser className="text-lg" /> },
+      { name: 'password', label: 'Password', type: 'password', icon: <VscKey className="text-lg" /> },
+    ],
+    showRemember: true,
+    forgotHref: '#',
+  },
+  register: {
+    title: 'Register',
+    submitLabel: 'Sign up',
+    redirectPrompt: 'Already have an account?',
+    redirectCta: 'Log in',
+    redirectHref: '/login',
+    secondaryAction: { label: 'Sign up with Google' },
+    fields: [
+      { name: 'name', label: 'Name', icon: <FiUser className="text-lg" /> },
+      { name: 'email', label: 'Email Address', type: 'email', icon: <FiMail className="text-lg" /> },
+      { name: 'password', label: 'Password', type: 'password', icon: <VscKey className="text-lg" /> },
+      { name: 'confirmPassword', label: 'Confirm Password', type: 'password', icon: <VscKey className="text-lg" /> },
+    ],
+  },
 }
 
 export const AuthPage = ({ mode }: AuthPageProps) => {
@@ -93,6 +94,7 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
     [copy.fields],
   )
   const [formValues, setFormValues] = useState(initialState)
+  const navigate = useNavigate()
 
   useEffect(() => {
     setFormValues(initialState)
@@ -103,10 +105,57 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
     setFormValues((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (evt: FormEvent) => {
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const res = await fetch('http://localhost:8000/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: tokenResponse.access_token }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          localStorage.setItem('token', data.token)
+          localStorage.setItem('user', JSON.stringify(data.user))
+          navigate('/') // Redirect to dashboard/home
+        } else {
+          console.error('Google auth failed:', data.message)
+        }
+      } catch (err) {
+        console.error('Google auth error:', err)
+      }
+    },
+    onError: () => console.error('Google Login Failed'),
+  })
+
+  // Hook up the secondary action (Sign up with Google) to the actual handler
+  // We need to modify the copy object dynamically or handle it in the click handler
+  // But copy is defined outside. Let's patch it in the render or wrap the button.
+  // Actually, we can just change the onClick in the copy definition if it was inside the component,
+  // but it's outside. We'll override the onClick handler in the button render.
+
+  const handleSubmit = async (evt: FormEvent) => {
     evt.preventDefault()
-    // TODO: hook up to client/src/lib/api.ts once endpoints are ready.
-    console.log(`[${mode}] form submission`, formValues)
+    const endpoint = mode === 'login' ? 'login' : 'register'
+    try {
+      const res = await fetch(`http://localhost:8000/auth/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formValues),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('user', JSON.stringify(data.user))
+        navigate('/')
+      } else {
+        alert(data.message) // Simple error handling for now
+      }
+    } catch (error) {
+      console.error('Auth error:', error)
+    }
   }
 
   const formContent = (
@@ -183,7 +232,11 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
               <span className="h-px flex-1 bg-current" />
             </div>
             {/* Optional secondary button */}
-            <button type="button" className={secondaryButtonClasses} onClick={copy.secondaryAction.onClick}>
+            <button
+              type="button"
+              className={secondaryButtonClasses}
+              onClick={copy.secondaryAction.label.includes('Google') ? () => handleGoogleLogin() : copy.secondaryAction.onClick}
+            >
               {copy.secondaryAction.label}
             </button>
           </>

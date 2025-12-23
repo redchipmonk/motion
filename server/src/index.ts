@@ -5,6 +5,7 @@ import { connectDatabase } from "./lib/connectDatabase";
 import rsvpsRouter from "./routes/rsvps";
 import eventsRouter from "./routes/events";
 import usersRouter from "./routes/users";
+import authRouter from "./routes/auth";
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use("/rsvps", rsvpsRouter);
 app.use("/events", eventsRouter);
 app.use("/users", usersRouter);
+app.use("/auth", authRouter);
 
 app.get("/health", (_, res) => res.json({ status: "ok" }));
 
