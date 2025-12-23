@@ -3,11 +3,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventModel } from "../models/event";
 import { EventService, CreateEventInput, UpdateEventInput } from "./eventService";
 
+// Mock User model
+vi.mock("../models/user", () => ({
+  User: {
+    findById: vi.fn(() => ({
+      select: vi.fn().mockResolvedValue({ following: [] }),
+    })),
+  },
+}));
+
 type EventModelLike = {
   new (doc: Record<string, unknown>): { save: () => Promise<Record<string, unknown>> };
   findById(id: string): { exec: () => Promise<Record<string, unknown> | null> };
   find(filter?: Record<string, unknown>): {
-    sort: (order: Record<string, number>) => { exec: () => Promise<Record<string, unknown>[]> };
+    sort: (order: Record<string, number>) => {
+      limit: (n: number) => {
+        populate: (path: string, fields: string) => { exec: () => Promise<Record<string, unknown>[]> };
+      };
+    };
   };
   findByIdAndUpdate(
     id: string,
@@ -47,9 +60,17 @@ const createEventModelMock = (): EventModelMock => {
 
   const model = Constructor as unknown as EventModelLike;
   model.findById = (id: string) => ({ exec: () => findByIdSpy(id) });
-  model.find = (filter?: Record<string, unknown>) => ({
-    sort: () => ({ exec: () => findSpy(filter) }),
-  });
+  model.find = (filter?: Record<string, unknown>) => {
+    const query = {
+      sort: () => query,
+      limit: () => query,
+      populate: () => query,
+      exec: () => findSpy(filter),
+      then: (resolve: (value: unknown) => void, reject: (reason?: unknown) => void) =>
+        findSpy(filter).then(resolve, reject),
+    };
+    return query as unknown as ReturnType<EventModelLike["find"]>;
+  };
   model.findByIdAndUpdate = (
     id: string,
     updates: Record<string, unknown>,
@@ -154,5 +175,27 @@ describe("EventService", () => {
     const deleted = await service.deleteEvent("1");
     expect(deleted).toEqual({ acknowledged: true });
     expect(mocks.deleteSpy).toHaveBeenCalledWith("1");
+  });
+
+  it("filters discovery feed by radius", async () => {
+    const userId = "user-123";
+    const longitude = -122.3;
+    const latitude = 47.65;
+    const radiusInMiles = 10;
+    const radiusInRadians = radiusInMiles / 3963.2;
+
+    mocks.findSpy.mockResolvedValueOnce([]);
+
+    await service.getDiscoveryFeed(userId, longitude, latitude, radiusInMiles);
+
+    expect(mocks.findSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        location: {
+          $geoWithin: {
+            $centerSphere: [[longitude, latitude], radiusInRadians],
+          },
+        },
+      })
+    );
   });
 });
