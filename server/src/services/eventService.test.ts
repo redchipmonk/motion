@@ -128,6 +128,27 @@ describe("EventService", () => {
     expect(mocks.updateSpy).toHaveBeenCalledWith("1", updates);
   });
 
+  it("updates event location with GeoJSON coordinates", async () => {
+    const updates: UpdateEventInput = {
+      location: {
+        address: "New Place",
+        latitude: 40.7128,
+        longitude: -74.006,
+      },
+    };
+
+    mocks.updateSpy.mockResolvedValueOnce({ _id: "1" });
+    await service.updateEvent("1", updates);
+
+    expect(mocks.updateSpy).toHaveBeenCalledWith("1", {
+      location: {
+        address: "New Place",
+        type: "Point",
+        coordinates: [-74.006, 40.7128],
+      },
+    });
+  });
+
   it("deletes event", async () => {
     mocks.deleteSpy.mockResolvedValueOnce({ acknowledged: true });
     const deleted = await service.deleteEvent("1");
