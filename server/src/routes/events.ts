@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { PipelineStage, Types } from "mongoose";
+import { protectedRoute, AuthRequest } from "../middleware/auth";
 import { eventService, CreateEventInput, UpdateEventInput } from "../services/eventService";
 
 const eventsRouter = Router();
@@ -50,7 +51,7 @@ eventsRouter.get("/feed", async (req, res, next) => {
  * POST /events
  * Creates a new event.
  */
-eventsRouter.post("/", async (req, res, next) => {
+eventsRouter.post("/", protectedRoute, async (req: AuthRequest, res, next) => {
   try {
     const body = req.body as CreateEventBody;
     if (!body.title || !body.description || !body.dateTime || !body.location || !body.createdBy) {
@@ -67,7 +68,7 @@ eventsRouter.post("/", async (req, res, next) => {
       dateTime: new Date(body.dateTime),
       endDateTime: body.endDateTime ? new Date(body.endDateTime) : undefined,
       location: body.location, // Expecting { address, latitude, longitude }
-      createdBy: body.createdBy,
+      createdBy: req.user!._id, // Enforce creator verification
       capacity: body.capacity,
       images: body.images,
     };
@@ -127,7 +128,7 @@ eventsRouter.get("/:id", async (req, res, next) => {
 /**
  * PATCH /events/:id
  */
-eventsRouter.patch("/:id", async (req, res, next) => {
+eventsRouter.patch("/:id", protectedRoute, async (req: AuthRequest, res, next) => {
   try {
     const body = req.body as UpdateEventBody;
     const { dateTime, endDateTime, ...rest } = body;
@@ -143,11 +144,14 @@ eventsRouter.patch("/:id", async (req, res, next) => {
     if (dateTime) updates.dateTime = new Date(dateTime);
     if (endDateTime) updates.endDateTime = new Date(endDateTime);
 
-    const event = await eventService.updateEvent(req.params.id, updates);
+    const event = await eventService.updateEvent(req.params.id, req.user!._id.toString(), updates);
     if (!event) return res.status(404).json({ error: "Event not found" });
 
     return res.json(event);
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return res.status(403).json({ error: "Not authorized to modify this event" });
+    }
     return next(error);
   }
 });
@@ -155,12 +159,15 @@ eventsRouter.patch("/:id", async (req, res, next) => {
 /**
  * DELETE /events/:id
  */
-eventsRouter.delete("/:id", async (req, res, next) => {
+eventsRouter.delete("/:id", protectedRoute, async (req: AuthRequest, res, next) => {
   try {
-    const result = await eventService.deleteEvent(req.params.id);
+    const result = await eventService.deleteEvent(req.params.id, req.user!._id.toString());
     if (!result) return res.status(404).json({ error: "Event not found" });
     return res.status(204).send();
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return res.status(403).json({ error: "Not authorized to delete this event" });
+    }
     return next(error);
   }
 });

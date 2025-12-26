@@ -6,6 +6,13 @@ import type { EventDocument } from "../models/event";
 import eventsRouter from "./events";
 import { eventService } from "../services/eventService";
 
+vi.mock("../middleware/auth", () => ({
+  protectedRoute: (req: { user?: { _id: Types.ObjectId } }, _res: unknown, next: () => void) => {
+    req.user = { _id: new Types.ObjectId("507f1f77bcf86cd799439011") };
+    next();
+  },
+}));
+
 vi.mock("../services/eventService", () => {
   const createMock = () => vi.fn();
   return {
@@ -34,18 +41,18 @@ type EventServiceMock = {
 const mockedEventService = eventService as unknown as EventServiceMock;
 
 const buildEvent = (overrides: Partial<EventDocument> = {}): EventDocument =>
-  ({
-    _id: new Types.ObjectId(),
-    title: "Event",
-    description: "Desc",
-    dateTime: new Date(),
-    location: { address: "UW", latitude: 0, longitude: 0 },
-    visibility: "public",
-    images: [],
-    tags: [],
-    createdBy: new Types.ObjectId(),
-    ...overrides,
-  } as EventDocument);
+({
+  _id: new Types.ObjectId(),
+  title: "Event",
+  description: "Desc",
+  dateTime: new Date(),
+  location: { address: "UW", latitude: 0, longitude: 0 },
+  visibility: "public",
+  images: [],
+  tags: [],
+  createdBy: new Types.ObjectId(),
+  ...overrides,
+} as EventDocument);
 
 describe("events router", () => {
   beforeEach(() => {
@@ -66,7 +73,12 @@ describe("events router", () => {
 
     const response = await request(app).post("/events").send(payload);
     expect(response.status).toBe(201);
-    expect(mockedEventService.createEvent).toHaveBeenCalled();
+    // createdBy should be overwritten by the middleware user
+    expect(mockedEventService.createEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        createdBy: new Types.ObjectId("507f1f77bcf86cd799439011"),
+      })
+    );
   });
 
   it("rejects invalid create payload", async () => {
@@ -123,7 +135,7 @@ describe("events router", () => {
     mockedEventService.updateEvent.mockResolvedValueOnce(buildEvent({ title: "Updated" }));
     const response = await request(app).patch("/events/1").send({ title: "Updated" });
     expect(response.status).toBe(200);
-    expect(mockedEventService.updateEvent).toHaveBeenCalledWith("1", { title: "Updated" });
+    expect(mockedEventService.updateEvent).toHaveBeenCalledWith("1", "507f1f77bcf86cd799439011", { title: "Updated" });
   });
 
   it("rejects invalid updates", async () => {
@@ -136,7 +148,7 @@ describe("events router", () => {
     mockedEventService.deleteEvent.mockResolvedValueOnce(buildEvent());
     const response = await request(app).delete("/events/1");
     expect(response.status).toBe(204);
-    expect(mockedEventService.deleteEvent).toHaveBeenCalledWith("1");
+    expect(mockedEventService.deleteEvent).toHaveBeenCalledWith("1", "507f1f77bcf86cd799439011");
   });
 
   it("returns 404 when deleting missing event", async () => {

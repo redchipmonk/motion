@@ -3,7 +3,7 @@ import type { UserModel } from "../models/user";
 import { UserService, CreateUserInput, UpdateUserInput } from "./userService";
 
 type UserModelLike = {
-  new (doc: Record<string, unknown>): { save: () => Promise<Record<string, unknown>> };
+  new(doc: Record<string, unknown>): { save: () => Promise<Record<string, unknown>> };
   findById(id: string): { exec: () => Promise<Record<string, unknown> | null> };
   findOne(filter: Record<string, unknown>): { exec: () => Promise<Record<string, unknown> | null> };
   find(filter?: Record<string, unknown>): {
@@ -110,13 +110,13 @@ describe("UserService", () => {
   it("updates a user", async () => {
     const updates: UpdateUserInput = { bio: "Updated bio" };
     mocks.updateSpy.mockResolvedValueOnce({ _id: "1", bio: "Updated bio" });
-    const updated = await service.updateUser("1", updates);
+    const updated = await service.updateUser("1", "1", updates);
     expect(updated?.bio).toBe("Updated bio");
   });
 
   it("deletes a user", async () => {
     mocks.deleteSpy.mockResolvedValueOnce({ acknowledged: true });
-    const deleted = await service.deleteUser("1");
+    const deleted = await service.deleteUser("1", "1");
     expect(deleted).toEqual({ acknowledged: true });
   });
 });

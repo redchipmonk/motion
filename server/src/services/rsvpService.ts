@@ -17,7 +17,7 @@ export interface UpdateRsvpInput {
 }
 
 export class RsvpService {
-  constructor(private readonly rsvpModel: RsvpModel = Rsvp) {}
+  constructor(private readonly rsvpModel: RsvpModel = Rsvp) { }
 
   async createRsvp(payload: CreateRsvpInput) {
     // Prevent hosts from RSVPing to their own events
@@ -78,12 +78,16 @@ export class RsvpService {
     return this.rsvpModel.find({ user: userId }).exec();
   }
 
-  async updateRsvp(id: string, updates: UpdateRsvpInput) {
+  async updateRsvp(id: string, userId: string, updates: UpdateRsvpInput) {
     const rsvp = await this.rsvpModel.findById(id);
     if (!rsvp) return null;
 
+    if (rsvp.user.toString() !== userId.toString()) {
+      throw new Error("Forbidden");
+    }
+
     const oldVal = rsvp.status === "going" ? 1 + (rsvp.plusOnes || 0) : 0;
-    
+
     // Apply updates
     if (updates.status) rsvp.status = updates.status;
     if (updates.notes !== undefined) rsvp.notes = updates.notes;
@@ -130,9 +134,13 @@ export class RsvpService {
     }
   }
 
-  async deleteRsvp(id: string) {
+  async deleteRsvp(id: string, userId: string) {
     const rsvp = await this.rsvpModel.findById(id);
     if (!rsvp) return null;
+
+    if (rsvp.user.toString() !== userId.toString()) {
+      throw new Error("Forbidden");
+    }
 
     if (rsvp.status === "going") {
       const amount = 1 + (rsvp.plusOnes || 0);

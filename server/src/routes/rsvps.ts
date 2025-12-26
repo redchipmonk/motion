@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { Types } from "mongoose";
+import { protectedRoute, AuthRequest } from "../middleware/auth";
 import { rsvpService, UpdateRsvpInput, CreateRsvpInput } from "../services/rsvpService";
 
 const rsvpsRouter = Router();
@@ -49,7 +50,7 @@ const sanitizeUpdate = (payload: unknown): UpdateRsvpBody | null => {
   return Object.keys(result).length ? result : {};
 };
 
-rsvpsRouter.post("/", async (req, res, next) => {
+rsvpsRouter.post("/", protectedRoute, async (req: AuthRequest, res, next) => {
   try {
     const body = req.body as Partial<CreateRsvpBody> | undefined;
     if (!isCreateBody(body)) {
@@ -58,7 +59,7 @@ rsvpsRouter.post("/", async (req, res, next) => {
 
     const rsvp = await rsvpService.createRsvp({
       event: new Types.ObjectId(body.event),
-      user: new Types.ObjectId(body.user),
+      user: req.user!._id,
       status: body.status,
       notes: body.notes,
     });
@@ -101,31 +102,37 @@ rsvpsRouter.get("/:id", async (req, res, next) => {
   }
 });
 
-rsvpsRouter.patch("/:id", async (req, res, next) => {
+rsvpsRouter.patch("/:id", protectedRoute, async (req: AuthRequest, res, next) => {
   try {
     const updates = sanitizeUpdate(req.body);
     if (!updates || Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "No valid fields provided for update" });
     }
 
-    const rsvp = await rsvpService.updateRsvp(req.params.id, updates);
+    const rsvp = await rsvpService.updateRsvp(req.params.id, req.user!._id.toString(), updates);
     if (!rsvp) {
       return res.status(404).json({ error: "RSVP not found" });
     }
     return res.json(rsvp);
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return res.status(403).json({ error: "Not authorized to modify this RSVP" });
+    }
     return next(error);
   }
 });
 
-rsvpsRouter.delete("/:id", async (req, res, next) => {
+rsvpsRouter.delete("/:id", protectedRoute, async (req: AuthRequest, res, next) => {
   try {
-    const deleted = await rsvpService.deleteRsvp(req.params.id);
+    const deleted = await rsvpService.deleteRsvp(req.params.id, req.user!._id.toString());
     if (!deleted) {
       return res.status(404).json({ error: "RSVP not found" });
     }
     return res.status(204).send();
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return res.status(403).json({ error: "Not authorized to delete this RSVP" });
+    }
     return next(error);
   }
 });

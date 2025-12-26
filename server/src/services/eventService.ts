@@ -61,7 +61,14 @@ export class EventService {
     return this.eventModel.aggregate(pipeline).exec();
   }
 
-  async updateEvent(id: string, updates: UpdateEventInput) {
+  async updateEvent(id: string, userId: string, updates: UpdateEventInput) {
+    const event = await this.eventModel.findById(id);
+    if (!event) return null;
+
+    if (event.createdBy.toString() !== userId.toString()) {
+      throw new Error("Forbidden");
+    }
+
     // Manual check for date logic if both are present in the update
     if (updates.dateTime && updates.endDateTime && updates.endDateTime <= updates.dateTime) {
       throw new Error("End date must be after start date");
@@ -79,7 +86,14 @@ export class EventService {
     return this.eventModel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true }).exec();
   }
 
-  async deleteEvent(id: string) {
+  async deleteEvent(id: string, userId: string) {
+    const event = await this.eventModel.findById(id);
+    if (!event) return null;
+
+    if (event.createdBy.toString() !== userId.toString()) {
+      throw new Error("Forbidden");
+    }
+
     return this.eventModel.findByIdAndDelete(id).exec();
   }
 

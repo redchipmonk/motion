@@ -12,7 +12,7 @@ export interface CreateUserInput {
 export type UpdateUserInput = Partial<CreateUserInput>;
 
 export class UserService {
-  constructor(private readonly userModel: UserModel = User) {}
+  constructor(private readonly userModel: UserModel = User) { }
 
   async createUser(payload: CreateUserInput) {
     const user = new this.userModel({
@@ -34,13 +34,19 @@ export class UserService {
     return this.userModel.find(filter).sort({ createdAt: -1 }).exec();
   }
 
-  async updateUser(id: string, updates: UpdateUserInput) {
+  async updateUser(id: string, authorizedUserId: string, updates: UpdateUserInput) {
+    if (id !== authorizedUserId.toString()) {
+      throw new Error("Forbidden");
+    }
     return this.userModel
       .findByIdAndUpdate(id, updates, { new: true, runValidators: true })
       .exec();
   }
 
-  async deleteUser(id: string) {
+  async deleteUser(id: string, authorizedUserId: string) {
+    if (id !== authorizedUserId.toString()) {
+      throw new Error("Forbidden");
+    }
     return this.userModel.findByIdAndDelete(id).exec();
   }
 }

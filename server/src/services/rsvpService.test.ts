@@ -178,7 +178,7 @@ describe("RsvpService", () => {
       mockedEvent.findOneAndUpdate.mockResolvedValue({ _id: eventId });
 
       // Change plusOnes from 1 to 3 (+2 net increase)
-      await service.updateRsvp(rsvpId, { plusOnes: 3 });
+      await service.updateRsvp(rsvpId, userId.toString(), { plusOnes: 3 });
 
       expect(mockedEvent.findOneAndUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ _id: eventId }),
@@ -198,7 +198,7 @@ describe("RsvpService", () => {
       });
       rsvpMocks.findByIdSpy.mockReturnValue(existingRsvp);
 
-      await service.updateRsvp(rsvpId, { status: "interested" });
+      await service.updateRsvp(rsvpId, userId.toString(), { status: "interested" });
 
       expect(mockedEvent.findByIdAndUpdate).toHaveBeenCalledWith(eventId, {
         $inc: { participantCount: -1 },
@@ -219,7 +219,7 @@ describe("RsvpService", () => {
       });
       rsvpMocks.findByIdSpy.mockReturnValue(existingRsvp);
 
-      await service.deleteRsvp(rsvpId);
+      await service.deleteRsvp(rsvpId, userId.toString());
 
       expect(mockedEvent.findByIdAndUpdate).toHaveBeenCalledWith(eventId, {
         $inc: { participantCount: -2 },

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { protectedRoute, AuthRequest } from "../middleware/auth";
 import { userService, CreateUserInput, UpdateUserInput } from "../services/userService";
 
 const usersRouter = Router();
@@ -45,7 +46,7 @@ const sanitizeUpdateBody = (payload: unknown): UpdateUserInput | null => {
   return Object.keys(result).length ? result : {};
 };
 
-usersRouter.post("/", async (req, res, next) => {
+usersRouter.post("/", protectedRoute, async (req: AuthRequest, res, next) => {
   try {
     const body = req.body as Partial<CreateUserInput> | undefined;
     if (!isCreateUserBody(body)) {
@@ -92,31 +93,37 @@ usersRouter.get("/:id", async (req, res, next) => {
   }
 });
 
-usersRouter.patch("/:id", async (req, res, next) => {
+usersRouter.patch("/:id", protectedRoute, async (req: AuthRequest, res, next) => {
   try {
     const updates = sanitizeUpdateBody(req.body);
     if (!updates || Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "No fields provided for update" });
     }
 
-    const user = await userService.updateUser(req.params.id, updates);
+    const user = await userService.updateUser(req.params.id, req.user!._id.toString(), updates);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
     return res.json(user);
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return res.status(403).json({ error: "Not authorized to modify this profile" });
+    }
     return next(error);
   }
 });
 
-usersRouter.delete("/:id", async (req, res, next) => {
+usersRouter.delete("/:id", protectedRoute, async (req: AuthRequest, res, next) => {
   try {
-    const deleted = await userService.deleteUser(req.params.id);
+    const deleted = await userService.deleteUser(req.params.id, req.user!._id.toString());
     if (!deleted) {
       return res.status(404).json({ error: "User not found" });
     }
     return res.status(204).send();
-  } catch (error) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "Forbidden") {
+      return res.status(403).json({ error: "Not authorized to delete this profile" });
+    }
     return next(error);
   }
 });

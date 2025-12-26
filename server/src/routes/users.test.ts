@@ -6,6 +6,13 @@ import type { UserDocument } from "../models/user";
 import usersRouter from "./users";
 import { userService } from "../services/userService";
 
+vi.mock("../middleware/auth", () => ({
+  protectedRoute: (req: { user?: { _id: Types.ObjectId } }, _res: unknown, next: () => void) => {
+    req.user = { _id: new Types.ObjectId("507f1f77bcf86cd799439011") };
+    next();
+  },
+}));
+
 vi.mock("../services/userService", () => {
   const mockFn = () => vi.fn();
   return {
@@ -34,15 +41,15 @@ app.use(express.json());
 app.use("/users", usersRouter);
 
 const buildUser = (overrides: Partial<UserDocument> = {}): UserDocument =>
-  ({
-    _id: new Types.ObjectId(),
-    name: "Test User",
-    email: "user@example.com",
-    bio: "",
-    organizations: [],
-    profileImage: undefined,
-    ...overrides,
-  } as UserDocument);
+({
+  _id: new Types.ObjectId(),
+  name: "Test User",
+  email: "user@example.com",
+  bio: "",
+  organizations: [],
+  profileImage: undefined,
+  ...overrides,
+} as UserDocument);
 
 describe("users router", () => {
   beforeEach(() => {
@@ -87,7 +94,7 @@ describe("users router", () => {
     mockedUserService.updateUser.mockResolvedValueOnce(buildUser({ bio: "updated" }));
     const response = await request(app).patch("/users/123").send({ bio: "updated" });
     expect(response.status).toBe(200);
-    expect(mockedUserService.updateUser).toHaveBeenCalledWith("123", { bio: "updated" });
+    expect(mockedUserService.updateUser).toHaveBeenCalledWith("123", "507f1f77bcf86cd799439011", { bio: "updated" });
   });
 
   it("rejects invalid updates", async () => {
@@ -106,6 +113,7 @@ describe("users router", () => {
     mockedUserService.deleteUser.mockResolvedValueOnce(buildUser());
     const response = await request(app).delete("/users/123");
     expect(response.status).toBe(204);
+    expect(mockedUserService.deleteUser).toHaveBeenCalledWith("123", "507f1f77bcf86cd799439011");
   });
 
   it("returns 404 when deleting missing user", async () => {
