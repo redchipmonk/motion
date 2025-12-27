@@ -4,11 +4,18 @@ import { VscKey } from 'react-icons/vsc'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useNavigate } from 'react-router-dom'
 import { motionTheme, cn } from '../theme'
+import { useAuth } from '../context/AuthContext'
+import { api } from '../lib/api'
 
 type AuthMode = 'login' | 'register'
 
 interface AuthPageProps {
   mode: AuthMode
+}
+
+interface AuthResponse {
+  token: string
+  user: { _id: string; name: string; email: string }
 }
 
 type AuthField = {
@@ -38,6 +45,7 @@ const AUTH_COPY: Record<
     redirectPrompt: "Don't have an account?",
     redirectCta: 'Create one',
     redirectHref: '/register',
+    secondaryAction: { label: 'Sign in with Google' },
     fields: [
       { name: 'email', label: 'Username/Email Address', type: 'email', icon: <FiUser className="text-lg" /> },
       { name: 'password', label: 'Password', type: 'password', icon: <VscKey className="text-lg" /> },
@@ -64,6 +72,81 @@ const AUTH_COPY: Record<
 export const AuthPage = ({ mode }: AuthPageProps) => {
   const copy = AUTH_COPY[mode]
   const isLogin = mode === 'login'
+  const { login } = useAuth()
+  const navigate = useNavigate()
+
+  const defaultValues = useMemo(
+    () =>
+      copy.fields.reduce<Record<string, string>>((acc, field) => {
+        acc[field.name] = ''
+        return acc
+      }, {}),
+    [copy.fields],
+  )
+
+  const [formValues, setFormValues] = useState(defaultValues)
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Reset form when switching modes
+  useEffect(() => {
+    setFormValues(defaultValues)
+    setError(null)
+  }, [defaultValues])
+
+  const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = evt.target
+    setFormValues((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setIsLoading(true)
+      try {
+        const data = await api.post<AuthResponse>('/auth/google', {
+          token: tokenResponse.access_token,
+        })
+        login(data.token, data.user)
+        navigate('/')
+      } catch (err: unknown) {
+        console.error('Google auth error:', err)
+        setError(err instanceof Error ? err.message : 'Google login failed')
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    onError: () => {
+      console.error('Google Login Failed')
+      setError('Google login failed')
+    },
+  })
+
+  // Hook up the secondary action (Sign up with Google) to the actual handler
+  // We need to modify the copy object dynamically or handle it in the click handler
+
+  const handleSubmit = async (evt: FormEvent) => {
+    evt.preventDefault()
+    setError(null)
+    setIsLoading(true)
+
+    try {
+      if (!isLogin && formValues.password !== formValues.confirmPassword) {
+        throw new Error("Passwords don't match")
+      }
+
+      const endpoint = isLogin ? '/auth/login' : '/auth/register'
+      const data = await api.post<AuthResponse>(endpoint, formValues)
+
+      login(data.token, data.user)
+      navigate('/')
+    } catch (err: unknown) {
+      console.error('Auth error:', err)
+      setError(err instanceof Error ? err.message : 'Authentication failed')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const primaryButtonClasses = cn(
     'w-full rounded-full border-2 border-transparent bg-motion-yellow py-2 font-semibold transition duration-150',
     motionTheme.typography.authButtonSizeClass,
@@ -74,7 +157,9 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
     motionTheme.states.primaryActiveBorder,
     motionTheme.states.primaryActiveBg,
     motionTheme.states.primaryActiveText,
+    isLoading && 'opacity-50 cursor-not-allowed'
   )
+
   const secondaryButtonClasses = cn(
     'w-full rounded-full border-2 border-motion-plum bg-white py-2 font-semibold text-motion-plum transition duration-150',
     motionTheme.typography.authButtonSizeClass,
@@ -84,79 +169,8 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
     motionTheme.states.secondaryActiveBorder,
     motionTheme.states.secondaryActiveBg,
     motionTheme.states.secondaryActiveText,
+    isLoading && 'opacity-50 cursor-not-allowed'
   )
-  const initialState = useMemo(
-    () =>
-      copy.fields.reduce<Record<string, string>>((acc, field) => {
-        acc[field.name] = ''
-        return acc
-      }, {}),
-    [copy.fields],
-  )
-  const [formValues, setFormValues] = useState(initialState)
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    setFormValues(initialState)
-  }, [initialState])
-
-  const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = evt.target
-    setFormValues((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        const res = await fetch('http://localhost:8000/auth/google', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: tokenResponse.access_token }),
-        })
-        const data = await res.json()
-        if (res.ok) {
-          localStorage.setItem('token', data.token)
-          localStorage.setItem('user', JSON.stringify(data.user))
-          navigate('/') // Redirect to dashboard/home
-        } else {
-          console.error('Google auth failed:', data.message)
-        }
-      } catch (err) {
-        console.error('Google auth error:', err)
-      }
-    },
-    onError: () => console.error('Google Login Failed'),
-  })
-
-  // Hook up the secondary action (Sign up with Google) to the actual handler
-  // We need to modify the copy object dynamically or handle it in the click handler
-  // But copy is defined outside. Let's patch it in the render or wrap the button.
-  // Actually, we can just change the onClick in the copy definition if it was inside the component,
-  // but it's outside. We'll override the onClick handler in the button render.
-
-  const handleSubmit = async (evt: FormEvent) => {
-    evt.preventDefault()
-    const endpoint = mode === 'login' ? 'login' : 'register'
-    try {
-      const res = await fetch(`http://localhost:8000/auth/${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formValues),
-      })
-
-      const data = await res.json()
-
-      if (res.ok) {
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
-        navigate('/')
-      } else {
-        alert(data.message) // Simple error handling for now
-      }
-    } catch (error) {
-      console.error('Auth error:', error)
-    }
-  }
 
   const formContent = (
     <div className={`w-full ${isLogin ? 'max-w-3xl' : 'max-w-xl'} px-8 ${motionTheme.typography.bodyFontClass}`}>
@@ -164,6 +178,13 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
       <div className="mb-4 text-center">
         <h2 className="text-[44px] font-bold leading-tight text-motion-plum">{copy.title}</h2>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600 border border-red-200">
+          {error}
+        </div>
+      )}
 
       {/* Auth form fields */}
       <form onSubmit={handleSubmit} className={`${isLogin ? 'mt-10 space-y-8' : 'mt-6 space-y-6'}`}>
@@ -189,8 +210,9 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
                 type={field.type ?? 'text'}
                 placeholder={field.label}
                 aria-label={field.label}
-                value={formValues[field.name] ?? ''}
+                value={formValues[field.name as keyof typeof formValues] ?? ''}
                 onChange={handleChange}
+                disabled={isLoading}
                 className={cn(
                   'w-full border-none bg-transparent font-medium focus:outline-none',
                   motionTheme.typography.authInputSizeClass,
@@ -219,8 +241,8 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
         )}
 
         {/* Primary submit button */}
-        <button type="submit" className={`${primaryButtonClasses} ${isLogin ? 'mt-6' : 'mt-8'}`}>
-          {copy.submitLabel}
+        <button type="submit" disabled={isLoading} className={`${primaryButtonClasses} ${isLogin ? 'mt-6' : 'mt-8'}`}>
+          {isLoading ? 'Loading...' : copy.submitLabel}
         </button>
 
         {copy.secondaryAction && (
@@ -236,6 +258,7 @@ export const AuthPage = ({ mode }: AuthPageProps) => {
               type="button"
               className={secondaryButtonClasses}
               onClick={copy.secondaryAction.label.includes('Google') ? () => handleGoogleLogin() : copy.secondaryAction.onClick}
+              disabled={isLoading}
             >
               {copy.secondaryAction.label}
             </button>

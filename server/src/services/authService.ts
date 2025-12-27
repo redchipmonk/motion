@@ -77,7 +77,9 @@ export class AuthService {
       };
     } catch (error) {
       console.error("Google token verification failed:", error);
-      throw new Error("Invalid Google Token");
+      // Determine if error is an Error object to safely access message
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`Invalid Google Token: ${errorMessage}`);
     }
   }
 }

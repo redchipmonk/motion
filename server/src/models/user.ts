@@ -5,7 +5,7 @@ export interface UserDocument extends Document {
   email: string;
   password?: string;
   googleId?: string;
-  handle: string;
+  handle?: string;
   userType: "individual" | "organization";
   bio?: string;
   organizations: string[];
@@ -32,7 +32,7 @@ const userSchema = new Schema<UserDocument>(
       unique: true,
       sparse: true,
     },
-    handle: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    handle: { type: String, required: false, unique: true, lowercase: true, trim: true, sparse: true },
     userType: {
       type: String,
       enum: ["individual", "organization"],

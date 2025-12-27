@@ -8,7 +8,6 @@ interface RegisterBody {
   name: string;
   email: string;
   password?: string;
-  handle: string;
 }
 
 /**
@@ -17,19 +16,22 @@ interface RegisterBody {
  */
 router.post("/register", async (req: express.Request<Record<string, never>, Record<string, never>, RegisterBody>, res: express.Response) => {
   try {
-    const { name, email, password, handle } = req.body;
+    const { name, email, password } = req.body;
 
-    if (!name || !email || !password || !handle) {
+    if (!name || !email || !password) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
     // Check if user exists
     const existingUser = await User.findOne({
-      $or: [{ email }, { handle }]
+      $or: [{ email }]
     });
 
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists with that email or handle" });
+      if (!existingUser.password && existingUser.googleId) {
+        return res.status(400).json({ message: "Account exists. Please sign in with Google." });
+      }
+      return res.status(400).json({ message: "User already exists with that email" });
     }
 
     const hashedPassword = await AuthService.hashPassword(password);
@@ -38,7 +40,7 @@ router.post("/register", async (req: express.Request<Record<string, never>, Reco
       name,
       email,
       password: hashedPassword,
-      handle,
+      // handle is optional now
       userType: "individual", // default
     });
 
@@ -57,7 +59,8 @@ router.post("/register", async (req: express.Request<Record<string, never>, Reco
     return res.status(201).json({ token, user: userResponse });
   } catch (error) {
     console.error("Register error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return res.status(500).json({ message: `Internal server error: ${errorMessage}` });
   }
 });
 
@@ -82,6 +85,9 @@ router.post("/login", async (req: express.Request<Record<string, never>, Record<
     const user = await User.findOne({ email }).select("+password");
 
     if (!user || !user.password) {
+      if (user && !user.password && user.googleId) {
+        return res.status(400).json({ message: "Account exists. Please sign in with Google." });
+      }
       return res.status(401).json({ message: "Invalid credentials" });
     }
 

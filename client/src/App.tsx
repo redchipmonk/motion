@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import AuthPage from './pages/AuthPage'
 import AppLayout from './pages/AppLayout'
 import EventsPage from './pages/EventsPage'
@@ -9,23 +11,28 @@ import ProfilePage from './pages/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
 
 const App = () => (
-  <BrowserRouter>
-    <Routes>
-      <Route path="/" element={<Navigate to="/events" replace />} />
+  <AuthProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/events" replace />} />
 
-      <Route element={<AppLayout />}>
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/events/:eventId" element={<EventDetailPage />} />
-        <Route path="/add-event" element={<AddEventPage />} />
-        <Route path="/my-events" element={<MyEventsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-      </Route>
+        {/* Auth routes */}
+        <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/register" element={<AuthPage mode="register" />} />
 
-      <Route path="/login" element={<AuthPage mode="login" />} />
-      <Route path="/register" element={<AuthPage mode="register" />} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  </BrowserRouter>
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:eventId" element={<EventDetailPage />} />
+          <Route path="/add-event" element={<AddEventPage />} />
+          <Route path="/my-events" element={<MyEventsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
+
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </BrowserRouter>
+  </AuthProvider>
 )
 
 export default App
