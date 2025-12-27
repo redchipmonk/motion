@@ -35,18 +35,30 @@ export class UserService {
   }
 
   async updateUser(id: string, authorizedUserId: string, updates: UpdateUserInput) {
-    if (id !== authorizedUserId.toString()) {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) {
+      return null;
+    }
+
+    if (user._id.toString() !== authorizedUserId.toString()) {
       throw new Error("Forbidden");
     }
+
     return this.userModel
       .findByIdAndUpdate(id, updates, { new: true, runValidators: true })
       .exec();
   }
 
   async deleteUser(id: string, authorizedUserId: string) {
-    if (id !== authorizedUserId.toString()) {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) {
+      return null;
+    }
+
+    if (user._id.toString() !== authorizedUserId.toString()) {
       throw new Error("Forbidden");
     }
+
     return this.userModel.findByIdAndDelete(id).exec();
   }
 }

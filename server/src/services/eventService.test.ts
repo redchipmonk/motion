@@ -21,7 +21,7 @@ const setupMocks = () => {
       // The static aggregate method calls the other spy
       return { exec: () => aggregateSpy(pipeline) };
     }
-    // Add other static mocks as needed, even if empty
+    // Add other static mocks as needed
     static findById = vi.fn();
     static findByIdAndUpdate = vi.fn();
     static findByIdAndDelete = vi.fn();
@@ -35,6 +35,9 @@ const setupMocks = () => {
     service,
     saveSpy,
     aggregateSpy,
+    findByIdSpy: MockEventModel.findById,
+    findByIdAndUpdateSpy: MockEventModel.findByIdAndUpdate,
+    findByIdAndDeleteSpy: MockEventModel.findByIdAndDelete,
   };
 };
 
@@ -112,7 +115,76 @@ describe("EventService", () => {
 
       expect(projectStage).toBeDefined();
       expect(projectStage.$project?.["creatorDetails.password"]).toBe(0);
-      // friendIds and userFriends are removed from projection because they are not created anymore
+    });
+  });
+
+  describe("updateEvent", () => {
+    it("updates an event if user is creator", async () => {
+      const { service, findByIdSpy, findByIdAndUpdateSpy } = setupMocks();
+      const eventId = "evt-1";
+      const userId = "user-1";
+      const existingEvent = { _id: eventId, createdBy: userId };
+
+      findByIdSpy.mockReturnValue({
+        createdBy: userId, // matches
+        toString: () => existingEvent // hack for simplistic mocks if needed, but simple obj is usu enough if code checks .toString()
+      });
+      // Correct way to mock Mongoose document with .toString() on ObjectId
+      findByIdSpy.mockReturnValue({
+        _id: eventId,
+        createdBy: { toString: () => userId }
+      });
+
+      findByIdAndUpdateSpy.mockReturnValue({ exec: () => Promise.resolve({ _id: eventId, title: "New" }) });
+
+      const result = await service.updateEvent(eventId, userId, { title: "New" });
+      expect(result).toBeDefined();
+      expect(findByIdAndUpdateSpy).toHaveBeenCalled();
+    });
+
+    it("throws Forbidden if user is not creator", async () => {
+      const { service, findByIdSpy } = setupMocks();
+      const eventId = "evt-1";
+      const userId = "user-1";
+      const otherUser = "user-99";
+
+      findByIdSpy.mockReturnValue({
+        _id: eventId,
+        createdBy: { toString: () => otherUser }
+      });
+
+      await expect(service.updateEvent(eventId, userId, { title: "New" })).rejects.toThrow("Forbidden");
+    });
+  });
+
+  describe("deleteEvent", () => {
+    it("deletes an event if user is creator", async () => {
+      const { service, findByIdSpy, findByIdAndDeleteSpy } = setupMocks();
+      const eventId = "evt-1";
+      const userId = "user-1";
+
+      findByIdSpy.mockReturnValue({
+        _id: eventId,
+        createdBy: { toString: () => userId }
+      });
+      findByIdAndDeleteSpy.mockReturnValue({ exec: () => Promise.resolve({ _id: eventId }) });
+
+      await service.deleteEvent(eventId, userId);
+      expect(findByIdAndDeleteSpy).toHaveBeenCalledWith(eventId);
+    });
+
+    it("throws Forbidden if user is not creator", async () => {
+      const { service, findByIdSpy } = setupMocks();
+      const eventId = "evt-1";
+      const userId = "user-1";
+      const otherUser = "user-99";
+
+      findByIdSpy.mockReturnValue({
+        _id: eventId,
+        createdBy: { toString: () => otherUser }
+      });
+
+      await expect(service.deleteEvent(eventId, userId)).rejects.toThrow("Forbidden");
     });
   });
 });

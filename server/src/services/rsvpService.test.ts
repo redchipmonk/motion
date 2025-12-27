@@ -205,6 +205,19 @@ describe("RsvpService", () => {
       });
       expect(rsvpMocks.saveSpy).toHaveBeenCalled();
     });
+
+    it("should throw Forbidden when updating another user's RSVP", async () => {
+      const rsvpId = "rsvp-forbidden";
+      const existingRsvp = rsvpMocks.createMockDoc({
+        _id: rsvpId,
+        event: eventId,
+        user: new mongoose.Types.ObjectId(), // Different user
+        status: "going",
+      });
+      rsvpMocks.findByIdSpy.mockReturnValue(existingRsvp);
+
+      await expect(service.updateRsvp(rsvpId, userId.toString(), { status: "interested" })).rejects.toThrow("Forbidden");
+    });
   });
 
   describe("deleteRsvp", () => {
@@ -225,6 +238,19 @@ describe("RsvpService", () => {
         $inc: { participantCount: -2 },
       });
       expect(rsvpMocks.deleteOneSpy).toHaveBeenCalled();
+    });
+
+    it("should throw Forbidden when deleting another user's RSVP", async () => {
+      const rsvpId = "rsvp-forbidden-del";
+      const existingRsvp = rsvpMocks.createMockDoc({
+        _id: rsvpId,
+        event: eventId,
+        user: new mongoose.Types.ObjectId(), // Different user
+        status: "going",
+      });
+      rsvpMocks.findByIdSpy.mockReturnValue(existingRsvp);
+
+      await expect(service.deleteRsvp(rsvpId, userId.toString())).rejects.toThrow("Forbidden");
     });
   });
 });

@@ -109,14 +109,27 @@ describe("UserService", () => {
 
   it("updates a user", async () => {
     const updates: UpdateUserInput = { bio: "Updated bio" };
+    mocks.findByIdSpy.mockResolvedValueOnce({ _id: "1" });
     mocks.updateSpy.mockResolvedValueOnce({ _id: "1", bio: "Updated bio" });
     const updated = await service.updateUser("1", "1", updates);
     expect(updated?.bio).toBe("Updated bio");
   });
 
+  it("throws Forbidden when updating another user", async () => {
+    const updates: UpdateUserInput = { bio: "Hacker" };
+    mocks.findByIdSpy.mockResolvedValueOnce({ _id: "1" });
+    await expect(service.updateUser("1", "2", updates)).rejects.toThrow("Forbidden");
+  });
+
   it("deletes a user", async () => {
+    mocks.findByIdSpy.mockResolvedValueOnce({ _id: "1" });
     mocks.deleteSpy.mockResolvedValueOnce({ acknowledged: true });
     const deleted = await service.deleteUser("1", "1");
     expect(deleted).toEqual({ acknowledged: true });
+  });
+
+  it("throws Forbidden when deleting another user", async () => {
+    mocks.findByIdSpy.mockResolvedValueOnce({ _id: "1" });
+    await expect(service.deleteUser("1", "2")).rejects.toThrow("Forbidden");
   });
 });
