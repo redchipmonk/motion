@@ -2,52 +2,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { FaFilter } from 'react-icons/fa'
 import EventCard, { type EventSummary } from './EventCard'
 import { motionTheme, cn } from '../theme'
-
-const MOCK_EVENTS: EventSummary[] = [
-  {
-    id: '1',
-    title: 'Bake Sale',
-    host: 'UW Cuisine Club',
-    datetime: 'Nov 20 · 1:00 PM',
-    startsAt: '2025-11-20T13:00:00-08:00',
-    distance: '0.6 miles',
-    tags: ['Food'],
-    heroImageUrl: '/images/mock/bake-sale.jpg',
-    rsvpLabel: 'RSVP',
-  },
-  {
-    id: '2',
-    title: 'Campus Clean Up',
-    host: 'Eco Huskies',
-    datetime: 'Nov 22 · 9:00 AM',
-    startsAt: '2025-11-22T09:00:00-08:00',
-    distance: '1.2 miles',
-    tags: ['Service', 'Outdoors'],
-    heroImageUrl: '/images/mock/cleanup.jpg',
-  },
-  {
-    id: '3',
-    title: 'Intramural Soccer Finals',
-    host: 'UW Athletics',
-    datetime: 'Nov 25 · 7:30 PM',
-    startsAt: '2025-11-25T19:30:00-08:00',
-    distance: 'On Campus',
-    tags: ['Sports'],
-    heroImageUrl: '/images/mock/soccer.jpg',
-  },
-  {
-    id: '4',
-    title: 'Winter Showcase',
-    host: 'UW Design Society',
-    datetime: 'Dec 3 · 6:30 PM',
-    startsAt: '2026-12-03T18:30:00-08:00',
-    distance: '0.8 miles',
-    tags: ['Arts'],
-    heroImageUrl: '/images/mock/bake-sale.jpg',
-  },
-]
+import { MOCK_EVENTS } from '../data/mockData'
 
 type EventFeedListProps = {
+  events?: EventSummary[]
   onSelectEvent?: (event: EventSummary) => void
 }
 
@@ -66,10 +24,10 @@ const formatPastDateLabel = (startsAt?: string) => {
   }).format(date)
 }
 
-const EventFeedList = ({ onSelectEvent }: EventFeedListProps) => {
+const EventFeedList = ({ onSelectEvent, events = MOCK_EVENTS }: EventFeedListProps) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(MOCK_EVENTS[0]?.id ?? null)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(events[0]?.id ?? null)
 
   // Filters (UI-first; tags filter is applied, others are placeholders for now)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -81,9 +39,9 @@ const EventFeedList = ({ onSelectEvent }: EventFeedListProps) => {
 
   const allTags = useMemo(() => {
     const tags = new Set<string>()
-    MOCK_EVENTS.forEach((event) => (event.tags ?? []).forEach((tag) => tags.add(tag)))
+    events.forEach((event) => (event.tags ?? []).forEach((tag) => tags.add(tag)))
     return Array.from(tags).sort((a, b) => a.localeCompare(b))
-  }, [])
+  }, [events])
 
   const filteredEvents = useMemo(() => {
     const lower = searchTerm.trim().toLowerCase()
@@ -102,14 +60,14 @@ const EventFeedList = ({ onSelectEvent }: EventFeedListProps) => {
       return matchesSearch && matchesTags
     }
 
-    const base = MOCK_EVENTS.filter((event) => matchesTab(event) && matchesSearchAndTags(event))
+    const base = events.filter((event) => matchesTab(event) && matchesSearchAndTags(event))
 
     return base.sort((a, b) => {
       const aMs = a.startsAt ? new Date(a.startsAt).getTime() : 0
       const bMs = b.startsAt ? new Date(b.startsAt).getTime() : 0
       return activeTab === 'past' ? bMs - aMs : aMs - bMs
     })
-  }, [searchTerm, selectedTags, activeTab])
+  }, [searchTerm, selectedTags, activeTab, events])
 
   const handleSelect = (event: EventSummary) => {
     setSelectedEventId(event.id)

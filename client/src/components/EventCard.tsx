@@ -12,6 +12,9 @@ export type EventSummary = {
   heroImageUrl: string
   rsvpLabel?: string
   footerNode?: ReactNode
+  location?: {
+    coordinates: [number, number] // [longitude, latitude] per GeoJSON
+  }
 }
 
 type EventCardVariant = 'list' | 'map' | 'preview'
@@ -58,31 +61,48 @@ const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: Even
       )}
     >
       <div className="relative">
-        <img src={heroImageUrl} alt={title} className="h-32 w-full object-cover" />
-        <span
-          data-testid="event-card-datetime"
-          className="absolute right-4 top-3 rounded-full bg-motion-orange px-3 py-1 text-xs font-semibold text-white shadow-[0_3px_8px_rgba(0,0,0,0.18)]"
-        >
-          {datetime}
-        </span>
-      </div>
-
-      <div className="space-y-2 px-4 pb-4 pt-3">
-        <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-base font-semibold text-motion-plum">{`${title} hosted by ${host}`}</p>
-          {distance && <p className="shrink-0 text-sm text-motion-plum/70">{distance}</p>}
-        </div>
-
-        {variant !== 'list' && tags.length > 0 && (
-          <ul className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <li key={tag} className="rounded-full bg-motion-lilac px-3 py-1 text-xs font-semibold text-motion-purple">
-                {tag}
-              </li>
-            ))}
-          </ul>
+        <img
+          src={heroImageUrl}
+          alt={title}
+          className={cn(
+            "w-full object-cover",
+            variant === 'preview' ? "h-24" : "h-32"
+          )}
+        />
+        {variant !== 'preview' && (
+          <span
+            data-testid="event-card-datetime"
+            className="absolute right-4 top-3 rounded-full bg-motion-orange px-3 py-1 text-xs font-semibold text-white shadow-[0_3px_8px_rgba(0,0,0,0.18)]"
+          >
+            {datetime}
+          </span>
         )}
       </div>
+
+      {variant === 'preview' ? (
+        <div className="bg-motion-orange px-3 py-2 text-white">
+          <p className="line-clamp-2 text-xs font-bold leading-tight">
+            {title} hosted by {host} <span className="opacity-80">@ {datetime.split('·')[1]?.trim() || datetime}</span>
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2 px-4 pb-4 pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="min-w-0 truncate text-base font-semibold text-motion-plum">{`${title} hosted by ${host}`}</p>
+            {distance && <p className="shrink-0 text-sm text-motion-plum/70">{distance}</p>}
+          </div>
+
+          {variant !== 'list' && tags.length > 0 && (
+            <ul className="flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <li key={tag} className="rounded-full bg-motion-lilac px-3 py-1 text-xs font-semibold text-motion-purple">
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </article>
   )
 }

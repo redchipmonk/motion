@@ -21,7 +21,7 @@ describe('EventFeedList', () => {
     expect(screen.getAllByTestId('event-card')).toHaveLength(1)
 
     fireEvent.click(screen.getByRole('button', { name: /past/i }))
-    expect(screen.getAllByTestId('event-card')).toHaveLength(3)
+    expect(screen.getAllByTestId('event-card')).toHaveLength(4)
 
     fireEvent.click(screen.getByRole('button', { name: /upcoming/i }))
     expect(screen.getAllByTestId('event-card')).toHaveLength(1)
@@ -40,7 +40,7 @@ describe('EventFeedList', () => {
 
     // Past: should include a year and should NOT include time markers or the dot separator.
     const pastPills = screen.getAllByTestId('event-card-datetime')
-    expect(pastPills).toHaveLength(3)
+    expect(pastPills).toHaveLength(4)
     for (const pill of pastPills) {
       expect(pill).toHaveTextContent(/\b20\d{2}\b/)
       expect(pill).not.toHaveTextContent('·')
