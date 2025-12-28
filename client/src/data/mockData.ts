@@ -1,4 +1,4 @@
-import type { EventSummary } from '../components/EventCard'
+import type { EventSummary } from '../types'
 import BakeSale from './Bake-Sale_800x531.jpg'
 import Trash from './trash.jpeg'
 import Soccer from './wc_final_16x9.jpg'

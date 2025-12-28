@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motionTheme, cn } from '../theme'
-import type { EventSummary } from './EventCard'
+import type { EventSummary } from '../types'
 import { Tooltip } from './Tooltip'
 import { HiArrowLongLeft, HiArrowLongRight } from "react-icons/hi2"
 
@@ -118,7 +118,7 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
               <div
                 className="mt-3 flex flex-wrap gap-2"
               >
-                {event.tags?.slice(0, visibleCount).map(tag => (
+                {event.tags?.slice(0, visibleCount).map((tag: string) => (
                   <span
                     key={tag}
                     className="rounded-full bg-motion-lilac px-6 py-2 text-md text-motion-purple"

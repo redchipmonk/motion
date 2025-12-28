@@ -5,7 +5,7 @@ import Map from '../components/Map/Map'
 import EventMarker from '../components/Map/EventMarker'
 import EventPreviewOverlay from '../components/EventPreviewOverlay'
 import { api } from '../lib/api'
-import type { EventSummary } from '../components/EventCard'
+import type { EventSummary } from '../types'
 
 const EventsPage = () => {
   const [events, setEvents] = useState<EventSummary[]>(MOCK_EVENTS)

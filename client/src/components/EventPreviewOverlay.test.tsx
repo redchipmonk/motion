@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import EventPreviewOverlay from './EventPreviewOverlay'
-import type { EventSummary } from './EventCard'
+import type { EventSummary } from '../types'
 
 describe('EventPreviewOverlay', () => {
   const mockEvent: EventSummary = {

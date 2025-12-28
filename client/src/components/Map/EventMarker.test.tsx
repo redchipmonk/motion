@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import EventMarker from './EventMarker'
-import type { EventSummary } from '../EventCard'
+import type { EventSummary } from '../../types'
 
 // Mock react-leaflet
 vi.mock('react-leaflet', () => ({

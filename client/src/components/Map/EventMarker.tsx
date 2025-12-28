@@ -1,7 +1,8 @@
 import { Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import { renderToStaticMarkup } from 'react-dom/server'
-import EventCard, { type EventSummary } from '../EventCard'
+import EventCard from '../EventCard'
+import type { EventSummary } from '../../types'
 
 type EventMarkerProps = {
   event: EventSummary

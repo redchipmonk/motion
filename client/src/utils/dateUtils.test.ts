@@ -4,7 +4,7 @@ import { formatPastDateLabel } from './dateUtils';
 describe('formatPastDateLabel', () => {
   it('returns null for undefined or null dates', () => {
     expect(formatPastDateLabel(undefined)).toBeNull();
-    // @ts-ignore
+    // @ts-expect-error Testing null input for robustness
     expect(formatPastDateLabel(null)).toBeNull();
   });
 
