@@ -1,13 +1,10 @@
 import { Router } from "express";
 import { protectedRoute, AuthRequest } from "../middleware/auth";
 import { userService, CreateUserInput, UpdateUserInput } from "../services/userService";
+import { asyncHandler } from "../middleware/asyncHandler";
+import { isString, isStringArray } from "../utils/validation";
 
 const usersRouter = Router();
-
-const isString = (value: unknown): value is string => typeof value === "string";
-
-const isStringArray = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every((item) => isString(item));
 
 const isCreateUserBody = (body: Partial<CreateUserInput> | undefined): body is CreateUserInput =>
   !!body && isString(body.name) && isString(body.email);
@@ -46,54 +43,42 @@ const sanitizeUpdateBody = (payload: unknown): UpdateUserInput | null => {
   return Object.keys(result).length ? result : {};
 };
 
-usersRouter.post("/", protectedRoute, async (req: AuthRequest, res, next) => {
-  try {
-    const body = req.body as Partial<CreateUserInput> | undefined;
-    if (!isCreateUserBody(body)) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    const user = await userService.createUser({
-      name: body.name,
-      email: body.email,
-      bio: body.bio,
-      organizations: body.organizations,
-      profileImage: body.profileImage,
-    });
-
-    return res.status(201).json(user);
-  } catch (error) {
-    return next(error);
+usersRouter.post("/", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
+  const body = req.body as Partial<CreateUserInput> | undefined;
+  if (!isCreateUserBody(body)) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
-});
 
-usersRouter.get("/", async (req, res, next) => {
-  try {
-    const filter: Record<string, unknown> = {};
-    if (typeof req.query.email === "string") {
-      filter.email = req.query.email;
-    }
+  const user = await userService.createUser({
+    name: body.name,
+    email: body.email,
+    bio: body.bio,
+    organizations: body.organizations,
+    profileImage: body.profileImage,
+  });
 
-    const users = await userService.listUsers(filter);
-    return res.json(users);
-  } catch (error) {
-    return next(error);
+  return res.status(201).json(user);
+}));
+
+usersRouter.get("/", asyncHandler(async (req, res) => {
+  const filter: Record<string, unknown> = {};
+  if (typeof req.query.email === "string") {
+    filter.email = req.query.email;
   }
-});
 
-usersRouter.get("/:id", async (req, res, next) => {
-  try {
-    const user = await userService.getUserById(req.params.id);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    return res.json(user);
-  } catch (error) {
-    return next(error);
+  const users = await userService.listUsers(filter);
+  return res.json(users);
+}));
+
+usersRouter.get("/:id", asyncHandler(async (req, res) => {
+  const user = await userService.getUserById(req.params.id);
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
   }
-});
+  return res.json(user);
+}));
 
-usersRouter.patch("/:id", protectedRoute, async (req: AuthRequest, res, next) => {
+usersRouter.patch("/:id", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
   try {
     const updates = sanitizeUpdateBody(req.body);
     if (!updates || Object.keys(updates).length === 0) {
@@ -109,11 +94,11 @@ usersRouter.patch("/:id", protectedRoute, async (req: AuthRequest, res, next) =>
     if (error instanceof Error && error.message === "Forbidden") {
       return res.status(403).json({ error: "Not authorized to modify this profile" });
     }
-    return next(error);
+    throw error;
   }
-});
+}));
 
-usersRouter.delete("/:id", protectedRoute, async (req: AuthRequest, res, next) => {
+usersRouter.delete("/:id", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
   try {
     const deleted = await userService.deleteUser(req.params.id, req.user!._id.toString());
     if (!deleted) {
@@ -124,8 +109,8 @@ usersRouter.delete("/:id", protectedRoute, async (req: AuthRequest, res, next) =
     if (error instanceof Error && error.message === "Forbidden") {
       return res.status(403).json({ error: "Not authorized to delete this profile" });
     }
-    return next(error);
+    throw error;
   }
-});
+}));
 
 export default usersRouter;

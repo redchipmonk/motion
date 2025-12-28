@@ -1,27 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { FaFilter } from 'react-icons/fa'
-import EventCard, { type EventSummary } from './EventCard'
+import EventCard from './EventCard'
 import { motionTheme, cn } from '../theme'
 import { MOCK_EVENTS } from '../data/mockData'
+import { FilterPanel, type SortOption, type TimeOption } from './FilterPanel'
+import { formatPastDateLabel } from '../utils/dateUtils'
+import type { EventSummary } from '../types'
 
 type EventFeedListProps = {
   events?: EventSummary[]
   onSelectEvent?: (event: EventSummary) => void
-}
-
-type SortOption = 'recommended' | 'soonest' | 'closest'
-type TimeOption = 'any' | 'today' | 'week' | 'month'
-
-const formatPastDateLabel = (startsAt?: string) => {
-  if (!startsAt) return null
-  const date = new Date(startsAt)
-  if (Number.isNaN(date.getTime())) return null
-
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date)
 }
 
 const EventFeedList = ({ onSelectEvent, events = MOCK_EVENTS }: EventFeedListProps) => {
@@ -29,20 +17,20 @@ const EventFeedList = ({ onSelectEvent, events = MOCK_EVENTS }: EventFeedListPro
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
   const [selectedEventId, setSelectedEventId] = useState<string | null>(events[0]?.id ?? null)
 
-  // Filters (UI-first; tags filter is applied, others are placeholders for now)
+  // Filters
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [timeWindow, setTimeWindow] = useState<TimeOption>('any')
   const [sortBy, setSortBy] = useState<SortOption>('recommended')
-  const filterButtonRef = useRef<HTMLButtonElement | null>(null)
-  const filtersPanelRef = useRef<HTMLDivElement | null>(null)
 
+  // Tag computation
   const allTags = useMemo(() => {
     const tags = new Set<string>()
     events.forEach((event) => (event.tags ?? []).forEach((tag) => tags.add(tag)))
     return Array.from(tags).sort((a, b) => a.localeCompare(b))
   }, [events])
 
+  // Filtering logic
   const filteredEvents = useMemo(() => {
     const lower = searchTerm.trim().toLowerCase()
     const nowMs = Date.now()
@@ -80,7 +68,6 @@ const EventFeedList = ({ onSelectEvent, events = MOCK_EVENTS }: EventFeedListPro
   const pastRef = useRef<HTMLButtonElement | null>(null)
   const [sliderStyle, setSliderStyle] = useState<{ width: number; x: number }>({ width: 0, x: 0 })
 
-  // Keep the latest tab in a ref so the resize listener never goes stale.
   const activeTabRef = useRef(activeTab)
   useEffect(() => {
     activeTabRef.current = activeTab
@@ -104,38 +91,10 @@ const EventFeedList = ({ onSelectEvent, events = MOCK_EVENTS }: EventFeedListPro
   }, [activeTab])
 
   useEffect(() => {
-    // Bind once; handler reads activeTabRef.current so it always stays in sync after resize.
     const onResize = () => syncSlider()
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
-
-  // Close filters on escape / outside click
-  useEffect(() => {
-    if (!filtersOpen) return
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFiltersOpen(false)
-    }
-
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null
-      if (!target) return
-      const panel = filtersPanelRef.current
-      const button = filterButtonRef.current
-      if (panel?.contains(target)) return
-      if (button?.contains(target)) return
-      setFiltersOpen(false)
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('pointerdown', onPointerDown)
-
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('pointerdown', onPointerDown)
-    }
-  }, [filtersOpen])
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
@@ -185,7 +144,6 @@ const EventFeedList = ({ onSelectEvent, events = MOCK_EVENTS }: EventFeedListPro
           </div>
 
           <button
-            ref={filterButtonRef}
             type="button"
             className="relative text-motion-purple"
             aria-label="Open filters"
@@ -260,152 +218,19 @@ const EventFeedList = ({ onSelectEvent, events = MOCK_EVENTS }: EventFeedListPro
         )}
       </section>
 
-      {filtersOpen && (
-        <div className="absolute inset-0 z-20">
-          <div className="absolute inset-0 bg-motion-plum/10 backdrop-blur-[2px]" />
-
-          <div
-            ref={filtersPanelRef}
-            role="dialog"
-            aria-label="Filters"
-            className={cn(
-              'absolute right-6 top-[88px] w-[340px] max-w-[calc(100%-48px)] rounded-3xl border bg-white p-5',
-              motionTheme.borders.authInput,
-              motionTheme.shadows.softLg,
-            )}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-base font-bold text-motion-plum">Filters</p>
-                <p className="text-xs text-motion-plum/60">Narrow down events</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setFiltersOpen(false)}
-                className="rounded-full px-3 py-1 text-sm font-semibold text-motion-plum/70 hover:bg-motion-lavender"
-                aria-label="Close filters"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-4">
-              <div>
-                <p className="text-sm font-semibold text-motion-plum">Time</p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {(
-                    [
-                      { id: 'any', label: 'Any time' },
-                      { id: 'today', label: 'Today' },
-                      { id: 'week', label: 'This week' },
-                      { id: 'month', label: 'This month' },
-                    ] as const
-                  ).map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setTimeWindow(opt.id)}
-                      className={cn(
-                        'rounded-2xl border px-3 py-2 text-sm font-semibold transition',
-                        timeWindow === opt.id
-                          ? 'border-motion-purple bg-motion-lavender text-motion-plum'
-                          : 'border-motion-plum/15 bg-white text-motion-plum/70 hover:border-motion-purple/30',
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-1 text-[11px] text-motion-plum/50">UI only (wiring date logic later).</p>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-motion-plum">Tags</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {allTags.map((tag) => {
-                    const active = selectedTags.includes(tag)
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => toggleTag(tag)}
-                        className={cn(
-                          'rounded-full border px-3 py-1 text-xs font-semibold transition',
-                          active
-                            ? 'border-motion-purple bg-motion-lavender text-motion-plum'
-                            : 'border-motion-plum/15 bg-white text-motion-plum/70 hover:border-motion-purple/30',
-                        )}
-                        aria-pressed={active}
-                      >
-                        {tag}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-motion-plum">Sort</p>
-                <div className="mt-2 space-y-2">
-                  {(
-                    [
-                      { id: 'recommended', label: 'Recommended' },
-                      { id: 'soonest', label: 'Soonest' },
-                      { id: 'closest', label: 'Closest' },
-                    ] as const
-                  ).map((opt) => (
-                    <label
-                      key={opt.id}
-                      className={cn(
-                        'flex cursor-pointer items-center justify-between rounded-2xl border bg-white px-3 py-2 transition',
-                        motionTheme.borders.authInput,
-                        'hover:border-motion-purple/30',
-                      )}
-                    >
-                      <span className="text-sm font-semibold text-motion-plum/80">{opt.label}</span>
-                      <input
-                        type="radio"
-                        name="sort"
-                        value={opt.id}
-                        checked={sortBy === opt.id}
-                        onChange={() => setSortBy(opt.id)}
-                        className="h-4 w-4 accent-motion-purple"
-                      />
-                    </label>
-                  ))}
-                </div>
-                <p className="mt-1 text-[11px] text-motion-plum/50">UI only (wiring sort logic later).</p>
-              </div>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="rounded-full px-4 py-2 text-sm font-semibold text-motion-plum/70 hover:bg-motion-lavender"
-              >
-                Clear
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFiltersOpen(false)}
-                className={cn(
-                  'rounded-full border-2 border-transparent bg-motion-yellow px-5 py-2 text-sm font-bold transition',
-                  motionTheme.text.accent,
-                  motionTheme.shadows.soft,
-                  motionTheme.states.primaryHoverBorder,
-                  motionTheme.states.primaryActiveBg,
-                  motionTheme.states.primaryActiveText,
-                )}
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <FilterPanel
+        isOpen={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        timeWindow={timeWindow}
+        setTimeWindow={setTimeWindow}
+        selectedTags={selectedTags}
+        toggleTag={toggleTag}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        allTags={allTags}
+        onClear={clearFilters}
+        onApply={() => setFiltersOpen(false)}
+      />
     </div>
   )
 }

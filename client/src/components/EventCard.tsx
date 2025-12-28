@@ -1,21 +1,6 @@
-import type { KeyboardEvent, ReactNode } from 'react'
+import type { KeyboardEvent } from 'react'
 import { cn } from '../theme'
-
-export type EventSummary = {
-  id: string
-  title: string
-  host: string
-  datetime: string
-  startsAt?: string
-  distance?: string
-  tags?: string[]
-  heroImageUrl: string
-  rsvpLabel?: string
-  footerNode?: ReactNode
-  location?: {
-    coordinates: [number, number] // [longitude, latitude] per GeoJSON
-  }
-}
+import type { EventSummary } from '../types'
 
 type EventCardVariant = 'list' | 'map' | 'preview'
 

@@ -156,4 +156,10 @@ describe("events router", () => {
     const response = await request(app).delete("/events/unknown");
     expect(response.status).toBe(404);
   });
+
+  it("returns 500 when service throws unexpected error", async () => {
+    mockedEventService.listEvents.mockRejectedValueOnce(new Error("Database boom"));
+    const response = await request(app).get("/events");
+    expect(response.status).toBe(500);
+  });
 });
