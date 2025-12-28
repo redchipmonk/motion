@@ -20,7 +20,7 @@ const DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon
 
 // UW Seattle coordinates
-const UW_COORDS: [number, number] = [47.6553, -122.3035]
+const UW_COORDS: [number, number] = [47.6558, -122.3268]
 
 type MapProps = {
   children?: ReactNode
@@ -29,7 +29,7 @@ type MapProps = {
   zoom?: number
 }
 
-const Map = ({ children, className, center = UW_COORDS, zoom = 15 }: MapProps) => {
+const Map = ({ children, className, center = UW_COORDS, zoom = 15.1 }: MapProps) => {
   return (
     <MapContainer center={center} zoom={zoom} scrollWheelZoom={true} className={className} style={{ height: '100%', width: '100%' }}>
       <TileLayer

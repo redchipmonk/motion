@@ -53,12 +53,12 @@ export const MOCK_EVENTS: EventSummary[] = [
   },
   {
     id: '5',
-    title: 'Holiday Party',
-    host: 'UW Social',
-    datetime: 'Today · 8:00 PM',
-    startsAt: '2025-12-27T20:00:00-08:00', // Matches user "today"
+    title: 'qwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnm',
+    host: 'UW Lambda Phi Epsilon',
+    datetime: 'Today · 11:59 PM',
+    startsAt: new Date(new Date().setHours(23, 59, 59, 999)).toISOString(),
     distance: '0.2 miles',
-    tags: ['Social', 'Party'],
+    tags: ['Social', 'Party', 'Holiday', 'Music', 'Dance', 'Food', 'Outdoors', 'Service', 'Sports', 'Arts'],
     heroImageUrl: Holiday,
     location: { coordinates: [-122.310, 47.655] },
   },

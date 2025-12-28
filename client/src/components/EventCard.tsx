@@ -81,7 +81,7 @@ const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: Even
 
       {variant === 'preview' ? (
         <div className="bg-motion-orange px-3 py-2 text-white">
-          <p className="line-clamp-2 text-xs font-bold leading-tight">
+          <p className="line-clamp-2 text-xs font-bold leading-tight" style={{ overflowWrap: 'anywhere' }}>
             {title} hosted by {host} <span className="opacity-80">@ {datetime.split('·')[1]?.trim() || datetime}</span>
           </p>
         </div>

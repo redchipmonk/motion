@@ -6,6 +6,7 @@ import EventCard, { type EventSummary } from '../EventCard'
 type EventMarkerProps = {
   event: EventSummary
   position: [number, number]
+  onClick?: (event: EventSummary) => void
 }
 
 const createCustomIcon = () => {
@@ -74,7 +75,7 @@ const createTodayIcon = (title: string) => {
 
 const defaultIcon = createCustomIcon()
 
-const EventMarker = ({ event, position }: EventMarkerProps) => {
+const EventMarker = ({ event, position, onClick }: EventMarkerProps) => {
   const isToday = (() => {
     if (!event.startsAt) return false
     const date = new Date(event.startsAt)
@@ -87,7 +88,13 @@ const EventMarker = ({ event, position }: EventMarkerProps) => {
   const icon = isToday ? createTodayIcon(event.title) : defaultIcon
 
   return (
-    <Marker position={position} icon={icon}>
+    <Marker
+      position={position}
+      icon={icon}
+      eventHandlers={{
+        click: () => onClick?.(event)
+      }}
+    >
       <Tooltip
         className="!bg-transparent !border-none !shadow-none !p-0"
         direction="top"

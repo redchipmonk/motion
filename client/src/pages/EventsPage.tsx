@@ -3,11 +3,13 @@ import EventFeedList from '../components/EventFeedList'
 import { MOCK_EVENTS } from '../data/mockData'
 import Map from '../components/Map/Map'
 import EventMarker from '../components/Map/EventMarker'
+import EventPreviewOverlay from '../components/EventPreviewOverlay'
 import { api } from '../lib/api'
 import type { EventSummary } from '../components/EventCard'
 
 const EventsPage = () => {
   const [events, setEvents] = useState<EventSummary[]>(MOCK_EVENTS)
+  const [selectedEvent, setSelectedEvent] = useState<EventSummary | null>(null)
   // Capture "now" at mount/render time purely
   const [now] = useState(() => Date.now())
 
@@ -51,17 +53,30 @@ const EventsPage = () => {
                   key={event.id}
                   event={event}
                   position={[lat, lng]}
+                  onClick={setSelectedEvent}
                 />
               )
             })}
         </Map>
       </div>
 
-      <div className="absolute inset-y-0 left-0 w-1/2 min-h-0">
-        <div className="h-full pointer-events-auto">
-          <EventFeedList events={events} />
+      {!selectedEvent && (
+        <div className="absolute inset-y-0 left-0 w-1/2 min-h-0">
+          <div className="h-full pointer-events-auto">
+            <EventFeedList
+              events={events}
+              onSelectEvent={setSelectedEvent}
+            />
+          </div>
         </div>
-      </div>
+      )}
+
+      {selectedEvent && (
+        <EventPreviewOverlay
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+        />
+      )}
     </section>
   )
 }
