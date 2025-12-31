@@ -1,4 +1,15 @@
-import { useEffect, useState } from 'react'
+/**
+ * @file Main events discovery page with map and feed.
+ * 
+ * Displays an interactive map with event markers and a scrollable feed.
+ * Clicking an event shows a preview overlay. Uses mock data as fallback
+ * when API is unavailable.
+ * 
+ * @example
+ * // Route: /events or /
+ */
+
+import { useEffect, useState } from 'react';
 import EventFeedList from '../components/EventFeedList'
 import { MOCK_EVENTS } from '../data/mockData'
 import Map from '../components/Map/Map'

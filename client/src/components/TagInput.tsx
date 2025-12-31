@@ -1,25 +1,20 @@
+/**
+ * @file Tag selection component for event creation.
+ * 
+ * Displays available tags as toggle buttons. Selected tags appear in the parent
+ * label area and are removed from the available list.
+ * 
+ * @example
+ * <TagInput tags={selectedTags} onChange={setSelectedTags} />
+ */
 
+import { EVENT_TAGS } from '../constants';
 
 interface TagInputProps {
   tags: string[];
   onChange: (tags: string[]) => void;
   placeholder?: string;
 }
-
-const AVAILABLE_TAGS = [
-  "Social",
-  "Food & Drink",
-  "Music",
-  "Tech",
-  "Arts",
-  "Sports",
-  "Outdoors",
-  "Wellness",
-  "Family",
-  "Nightlife",
-  "Education",
-  "Networking",
-];
 
 const TagInput = ({ tags, onChange }: TagInputProps) => {
   const handleToggle = (tag: string) => {
@@ -31,7 +26,7 @@ const TagInput = ({ tags, onChange }: TagInputProps) => {
   };
 
   // Only show tags that aren't selected yet (they appear in the label area when selected)
-  const availableTags = AVAILABLE_TAGS.filter((t) => !tags.includes(t));
+  const availableTags = EVENT_TAGS.filter((t) => !tags.includes(t));
 
   return (
     <div className="flex flex-wrap gap-2 text-sm">

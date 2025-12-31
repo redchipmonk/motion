@@ -1,30 +1,53 @@
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react'
-import { FiMail, FiUser } from 'react-icons/fi'
-import { VscKey } from 'react-icons/vsc'
-import { useGoogleLogin } from '@react-oauth/google'
-import { useNavigate } from 'react-router-dom'
-import { motionTheme, cn } from '../theme'
-import { useAuth } from '../context/AuthContext'
-import { api } from '../lib/api'
+/**
+ * @file Unified authentication page for login and registration.
+ * 
+ * Uses a configuration-driven approach with AUTH_COPY to render different UI
+ * based on the mode prop. Supports both email/password and Google OAuth.
+ * 
+ * @example
+ * <AuthPage mode="login" />
+ * <AuthPage mode="register" />
+ */
 
-type AuthMode = 'login' | 'register'
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { FiMail, FiUser } from 'react-icons/fi';
+import { VscKey } from 'react-icons/vsc';
+import { useGoogleLogin } from '@react-oauth/google';
+import { useNavigate } from 'react-router-dom';
+import { motionTheme, cn } from '../theme';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
+
+/** Authentication mode - determines form layout and fields */
+type AuthMode = 'login' | 'register';
 
 interface AuthPageProps {
-  mode: AuthMode
+  /** Which authentication mode to render */
+  mode: AuthMode;
 }
 
+/** API response structure from authentication endpoints */
 interface AuthResponse {
-  token: string
-  user: { _id: string; name: string; email: string }
+  token: string;
+  user: { _id: string; name: string; email: string };
 }
 
+/** Configuration for a single form field */
 type AuthField = {
-  name: string
-  label: string
-  type?: string
-  icon: ReactNode
-}
+  name: string;
+  label: string;
+  type?: string;
+  icon: ReactNode;
+};
 
+/**
+ * Configuration object for auth page copy and behavior.
+ * Each mode (login/register) has its own set of:
+ * - Title and labels
+ * - Form fields with icons
+ * - Navigation links
+ * - Optional features (remember me, Google login)
+ */
 const AUTH_COPY: Record<
   AuthMode,
   {
@@ -69,83 +92,106 @@ const AUTH_COPY: Record<
   },
 }
 
+/**
+ * Authentication page component supporting login and registration modes.
+ * 
+ * Features:
+ * - Configuration-driven form rendering via AUTH_COPY
+ * - Google OAuth integration
+ * - Email/password authentication
+ * - Form validation (password matching for registration)
+ * - Split-panel layout for login, centered layout for register
+ */
 export const AuthPage = ({ mode }: AuthPageProps) => {
-  const copy = AUTH_COPY[mode]
-  const isLogin = mode === 'login'
-  const { login } = useAuth()
-  const navigate = useNavigate()
+  // Get config for current mode
+  const copy = AUTH_COPY[mode];
+  const isLogin = mode === 'login';
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
+  /**
+   * Generates default empty values for form fields based on current mode.
+   * Memoized to avoid recreating on every render.
+   */
   const defaultValues = useMemo(
     () =>
       copy.fields.reduce<Record<string, string>>((acc, field) => {
-        acc[field.name] = ''
-        return acc
+        acc[field.name] = '';
+        return acc;
       }, {}),
     [copy.fields],
-  )
+  );
 
-  const [formValues, setFormValues] = useState(defaultValues)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  // Form State
+  const [formValues, setFormValues] = useState(defaultValues);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Reset form when switching modes
+  // Reset form when switching between login/register modes
   useEffect(() => {
-    setFormValues(defaultValues)
-    setError(null)
-  }, [defaultValues])
+    setFormValues(defaultValues);
+    setError(null);
+  }, [defaultValues]);
 
+  /** Updates a single form field value */
   const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = evt.target
-    setFormValues((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = evt.target;
+    setFormValues((prev) => ({ ...prev, [name]: value }));
+  };
 
+  /**
+   * Handles Google OAuth login flow.
+   * Exchanges Google access token for our app's JWT.
+   */
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
         const data = await api.post<AuthResponse>('/auth/google', {
           token: tokenResponse.access_token,
-        })
-        login(data.token, data.user)
-        navigate('/')
+        });
+        login(data.token, data.user);
+        navigate('/');
       } catch (err: unknown) {
-        console.error('Google auth error:', err)
-        setError(err instanceof Error ? err.message : 'Google login failed')
+        console.error('Google auth error:', err);
+        setError(err instanceof Error ? err.message : 'Google login failed');
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     },
     onError: () => {
-      console.error('Google Login Failed')
-      setError('Google login failed')
+      console.error('Google Login Failed');
+      setError('Google login failed');
     },
-  })
+  });
 
-  // Hook up the secondary action (Sign up with Google) to the actual handler
-  // We need to modify the copy object dynamically or handle it in the click handler
-
+  /**
+   * Handles form submission for email/password auth.
+   * Validates passwords match (for registration) then calls API.
+   */
   const handleSubmit = async (evt: FormEvent) => {
-    evt.preventDefault()
-    setError(null)
-    setIsLoading(true)
+    evt.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
     try {
+      // Validate password confirmation for registration
       if (!isLogin && formValues.password !== formValues.confirmPassword) {
-        throw new Error("Passwords don't match")
+        throw new Error("Passwords don't match");
       }
 
-      const endpoint = isLogin ? '/auth/login' : '/auth/register'
-      const data = await api.post<AuthResponse>(endpoint, formValues)
+      const endpoint = isLogin ? '/auth/login' : '/auth/register';
+      const data = await api.post<AuthResponse>(endpoint, formValues);
 
-      login(data.token, data.user)
-      navigate('/')
+      login(data.token, data.user);
+      navigate('/');
     } catch (err: unknown) {
-      console.error('Auth error:', err)
-      setError(err instanceof Error ? err.message : 'Authentication failed')
+      console.error('Auth error:', err);
+      setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const primaryButtonClasses = cn(
     'w-full rounded-full border-2 border-transparent bg-motion-yellow py-2 font-semibold transition duration-150',

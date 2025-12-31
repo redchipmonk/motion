@@ -1,3 +1,13 @@
+/**
+ * @file Event Mongoose model with GeoJSON location support.
+ * 
+ * Defines the Event schema with 2dsphere indexing for location-based queries.
+ * Location coordinates must be [longitude, latitude] per GeoJSON spec.
+ * Includes indexes for geospatial queries and date-based sorting.
+ * 
+ * @see https://www.mongodb.com/docs/manual/reference/geojson/
+ */
+
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface EventLocation {

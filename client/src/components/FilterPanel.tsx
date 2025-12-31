@@ -1,26 +1,68 @@
+/**
+ * @file Filter panel dialog for event feed.
+ * 
+ * Provides UI for filtering events by time window, tags, and sort order.
+ * Exports filter type definitions for use in parent components.
+ * Renders as a modal overlay with backdrop click-to-close.
+ * 
+ * @example
+ * <FilterPanel
+ *   isOpen={isFilterOpen}
+ *   onClose={() => setFilterOpen(false)}
+ *   timeWindow={timeWindow}
+ *   setTimeWindow={setTimeWindow}
+ *   // ...other props
+ * />
+ */
+
 import { useRef, useEffect } from "react";
 import { motionTheme, cn } from "../theme";
 
 export type SortOption = "recommended" | "soonest" | "closest";
 export type TimeOption = "any" | "today" | "week" | "month";
 
+/** Props for the FilterPanel component */
 interface FilterPanelProps {
+  /** Whether the panel is currently visible */
   isOpen: boolean;
+  /** Callback to close the panel */
   onClose: () => void;
-  // State
+
+  // ----- Filter State -----
+  /** Currently selected time window filter */
   timeWindow: TimeOption;
+  /** Setter for time window filter */
   setTimeWindow: (val: TimeOption) => void;
+  /** Currently selected tag filters */
   selectedTags: string[];
+  /** Toggles a tag in the selected tags array */
   toggleTag: (tag: string) => void;
+  /** Current sort order */
   sortBy: SortOption;
+  /** Setter for sort order */
   setSortBy: (val: SortOption) => void;
-  // Data
+
+  // ----- Data -----
+  /** All available tags extracted from events */
   allTags: string[];
-  // Actions
+
+  // ----- Actions -----
+  /** Resets all filters to defaults */
   onClear: () => void;
+  /** Applies filters and closes panel */
   onApply: () => void;
 }
 
+/**
+ * Filter panel modal for narrowing down event results.
+ * 
+ * Features:
+ * - Time window selection (any, today, this week, this month)
+ * - Tag-based filtering with pills
+ * - Sort order selection
+ * - Clear/Apply actions
+ * - ESC key and backdrop click to close
+ */
 export const FilterPanel = ({
   isOpen,
   onClose,

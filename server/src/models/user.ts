@@ -1,3 +1,12 @@
+/**
+ * @file User Mongoose model with unified authentication support.
+ * 
+ * Supports both Google OAuth and local email/password authentication.
+ * Password field is select:false by default for security.
+ * 
+ * @see GEMINI.md for authentication architecture details
+ */
+
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface UserDocument extends Document {

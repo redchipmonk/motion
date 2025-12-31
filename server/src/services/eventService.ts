@@ -1,5 +1,23 @@
+/**
+ * @file Event business logic service.
+ * 
+ * Handles CRUD operations for events including geospatial queries for the
+ * discovery feed. Uses MongoDB aggregation pipelines with $geoNear for
+ * location-based filtering.
+ * 
+ * @example
+ * import { eventService } from './eventService';
+ * const feed = await eventService.getDiscoveryFeed(userId, lng, lat, 10);
+ */
+
 import mongoose, { PipelineStage } from "mongoose";
 import { Event, EventDocument, EventModel } from "../models/event";
+import {
+  MILES_TO_METERS,
+  DEFAULT_FEED_RADIUS_MILES,
+  ERROR_FORBIDDEN,
+  ERROR_END_DATE_BEFORE_START
+} from "../constants";
 
 export interface CreateEventInput {
   title: string;
@@ -39,14 +57,29 @@ export interface UpdateEventInput {
   price?: number;
 }
 
+/**
+ * Service class for event CRUD operations and geospatial queries.
+ * Uses dependency injection for testability (accepts custom EventModel).
+ */
 export class EventService {
   constructor(private readonly eventModel: EventModel = Event) { }
 
+  /**
+   * Creates a new event with location data.
+   * Converts lat/lng to GeoJSON Point format for MongoDB 2dsphere indexing.
+   * 
+   * @param payload - Event creation data including location
+   * @returns The created event document
+   * @throws Error if endDateTime <= dateTime
+   */
   async createEvent(payload: CreateEventInput) {
+    // Validate date range
     if (payload.endDateTime && payload.endDateTime <= payload.dateTime) {
-      throw new Error("End date must be after start date");
+      throw new Error(ERROR_END_DATE_BEFORE_START);
     }
 
+    // Convert location to GeoJSON Point format
+    // MongoDB 2dsphere index requires [longitude, latitude] order
     const eventData = {
       ...payload,
       location: {
@@ -59,27 +92,49 @@ export class EventService {
     return event.save();
   }
 
+  /**
+   * Retrieves a single event by its MongoDB ObjectId.
+   * @param id - Event ID string
+   * @returns Event document or null if not found
+   */
   async getEventById(id: string) {
     return this.eventModel.findById(id).exec();
   }
 
+  /**
+   * Executes an aggregation pipeline for flexible event queries.
+   * @param pipeline - MongoDB aggregation pipeline stages
+   * @returns Array of aggregation results
+   */
   async listEvents(pipeline: PipelineStage[]) {
     return this.eventModel.aggregate(pipeline).exec();
   }
 
+  /**
+   * Updates an existing event with ownership verification.
+   * Only the event creator can modify the event.
+   * 
+   * @param id - Event ID to update
+   * @param userId - ID of the user making the request
+   * @param updates - Partial event data to update
+   * @returns Updated event document or null if not found
+   * @throws Error("Forbidden") if user is not the creator
+   */
   async updateEvent(id: string, userId: string, updates: UpdateEventInput) {
     const event = await this.eventModel.findById(id);
     if (!event) return null;
 
+    // Ownership check - only creator can modify
     if (event.createdBy.toString() !== userId.toString()) {
-      throw new Error("Forbidden");
+      throw new Error(ERROR_FORBIDDEN);
     }
 
-    // Manual check for date logic if both are present in the update
+    // Validate date range if both are being updated
     if (updates.dateTime && updates.endDateTime && updates.endDateTime <= updates.dateTime) {
       throw new Error("End date must be after start date");
     }
 
+    // Convert location to GeoJSON if provided
     const { location, ...rest } = updates;
     const updateData: Partial<EventDocument> = { ...rest };
     if (location) {
@@ -92,10 +147,20 @@ export class EventService {
     return this.eventModel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true }).exec();
   }
 
+  /**
+   * Deletes an event with ownership verification.
+   * Only the event creator can delete the event.
+   * 
+   * @param id - Event ID to delete
+   * @param userId - ID of the user making the request
+   * @returns Deleted event document or null if not found
+   * @throws Error("Forbidden") if user is not the creator
+   */
   async deleteEvent(id: string, userId: string) {
     const event = await this.eventModel.findById(id);
     if (!event) return null;
 
+    // Ownership check - only creator can delete
     if (event.createdBy.toString() !== userId.toString()) {
       throw new Error("Forbidden");
     }
@@ -114,10 +179,9 @@ export class EventService {
     userId: string, // Kept for future use or if we want to flag "my events" in the UI
     longitude: number,
     latitude: number,
-    radiusInMiles: number = 10
+    radiusInMiles: number = DEFAULT_FEED_RADIUS_MILES
   ) {
-    // Earth radius is approximately 3963.2 miles
-    const radiusInMeters = radiusInMiles * 1609.34;
+    const radiusInMeters = radiusInMiles * MILES_TO_METERS;
 
     const pipeline: PipelineStage[] = [
       // Stage 1: Geospatial filter using $geoNear. This MUST be the first stage.

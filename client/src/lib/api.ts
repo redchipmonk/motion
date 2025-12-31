@@ -1,6 +1,16 @@
+/**
+ * @file HTTP client wrapper for the Motion API.
+ * 
+ * Provides typed GET, POST, PATCH, DELETE methods with automatic auth token injection.
+ * All API requests go through this singleton to ensure consistent error handling
+ * and authentication header management.
+ * 
+ * @example
+ * import { api } from '@/lib/api';
+ * const events = await api.get<Event[]>('/events');
+ */
 
-
-const BASE_URL = 'http://localhost:8000';
+import { API_BASE_URL } from '../constants';
 
 interface RequestOptions extends RequestInit {
   headers?: Record<string, string>;
@@ -19,7 +29,7 @@ class Api {
   }
 
   async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const url = `${BASE_URL}${endpoint}`;
+    const url = `${API_BASE_URL}${endpoint}`;
     const headers = { ...this.getHeaders(), ...options.headers };
 
     const response = await fetch(url, { ...options, headers });

@@ -1,3 +1,16 @@
+/**
+ * @file Design system tokens and utilities for the Motion application.
+ * 
+ * Exports `motionTheme` object with palette colors, typography, shadows, and state styles.
+ * Also exports `cn()` utility for conditional class name merging (uses clsx).
+ * 
+ * @example
+ * import { motionTheme, cn } from '@/theme';
+ * className={cn('base-class', isActive && 'active-class', motionTheme.shadows.soft)}
+ */
+
+import { clsx, type ClassValue } from 'clsx';
+
 const palette = {
   purple: '#5F0589',
   deepPurple: '#301071',
@@ -96,4 +109,4 @@ export const motionTheme = {
   },
 }
 
-export const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
+export const cn = (...inputs: ClassValue[]) => clsx(inputs);

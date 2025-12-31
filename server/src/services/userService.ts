@@ -1,5 +1,6 @@
 import { QueryFilter } from "mongoose";
 import { User, UserDocument, UserModel } from "../models/user";
+import { ERROR_FORBIDDEN } from "../constants";
 
 export interface CreateUserInput {
   name: string;
@@ -41,7 +42,7 @@ export class UserService {
     }
 
     if (user._id.toString() !== authorizedUserId.toString()) {
-      throw new Error("Forbidden");
+      throw new Error(ERROR_FORBIDDEN);
     }
 
     return this.userModel
@@ -56,7 +57,7 @@ export class UserService {
     }
 
     if (user._id.toString() !== authorizedUserId.toString()) {
-      throw new Error("Forbidden");
+      throw new Error(ERROR_FORBIDDEN);
     }
 
     return this.userModel.findByIdAndDelete(id).exec();

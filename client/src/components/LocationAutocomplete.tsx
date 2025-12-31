@@ -1,61 +1,62 @@
-import { useState, useEffect, useRef } from 'react'
+/**
+ * @file OpenStreetMap-powered location autocomplete component.
+ * 
+ * Uses Nominatim API for geocoding with debounced input (1s delay to respect
+ * usage policy). Displays suggestions in a dropdown and returns coordinates
+ * on selection.
+ * 
+ * @example
+ * <LocationAutocomplete onSelect={(address, lat, lng) => setLocation({ address, lat, lng })} />
+ */
+
+import { useState } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
 
 interface Location {
-  display_name: string
-  lat: string
-  lon: string
+  display_name: string;
+  lat: string;
+  lon: string;
 }
 
 interface LocationAutocompleteProps {
-  onSelect: (address: string, lat: number, lng: number) => void
+  onSelect: (address: string, lat: number, lng: number) => void;
 }
 
 const LocationAutocomplete = ({ onSelect }: LocationAutocompleteProps) => {
-  const [query, setQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<Location[]>([])
-  const [isOpen, setIsOpen] = useState(false)
-  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(null)
-
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current)
-    }
-  }, [])
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<Location[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
 
   const searchNominatim = async (value: string) => {
-    if (!value || value.length < 3) return
+    if (!value || value.length < 3) return;
 
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&limit=5`
-      )
-      const data = await response.json()
-      setSuggestions(data)
-      setIsOpen(true)
+      );
+      const data = await response.json();
+      setSuggestions(data);
+      setIsOpen(true);
     } catch (error) {
-      console.error('Error fetching location suggestions:', error)
+      console.error('Error fetching location suggestions:', error);
     }
-  }
+  };
+
+  // Debounce to respect Nominatim usage policy (1 request per sec roughly)
+  const debouncedSearch = useDebouncedCallback(searchNominatim, 1000);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setQuery(value)
-
-    if (debounceTimer.current) clearTimeout(debounceTimer.current)
-
-    // Debounce to respect Nominatim usage policy (1 request per sec roughly)
-    debounceTimer.current = setTimeout(() => {
-      searchNominatim(value)
-    }, 1000)
-  }
+    const value = e.target.value;
+    setQuery(value);
+    debouncedSearch(value);
+  };
 
   const handleSelect = (location: Location) => {
-    setQuery(location.display_name)
-    setIsOpen(false)
-    setSuggestions([])
-    onSelect(location.display_name, parseFloat(location.lat), parseFloat(location.lon))
-  }
+    setQuery(location.display_name);
+    setIsOpen(false);
+    setSuggestions([]);
+    onSelect(location.display_name, parseFloat(location.lat), parseFloat(location.lon));
+  };
 
   return (
     <div className="relative w-full group">
@@ -84,7 +85,7 @@ const LocationAutocomplete = ({ onSelect }: LocationAutocompleteProps) => {
         Powered by OpenStreetMap
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default LocationAutocomplete
+export default LocationAutocomplete;

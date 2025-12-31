@@ -1,70 +1,98 @@
-import { useEffect, useState } from 'react'
-import { motionTheme, cn } from '../theme'
-import type { EventSummary } from '../types'
-import { Tooltip } from './Tooltip'
-import { HiArrowLongLeft, HiArrowLongRight } from "react-icons/hi2"
+/**
+ * @file Modal overlay for event preview/details.
+ * 
+ * Displays event information in a centered modal with hero image, title,
+ * host, location, and RSVP button. Responsive tag display adapts to screen width.
+ * Closes on ESC key or backdrop click.
+ * 
+ * @example
+ * <EventPreviewOverlay event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+ */
 
+import { useEffect, useState } from 'react';
+import { format, isToday, parseISO } from 'date-fns';
+import { motionTheme, cn } from '../theme';
+import type { EventSummary } from '../types';
+import { Tooltip } from './Tooltip';
+import { HiArrowLongLeft, HiArrowLongRight } from 'react-icons/hi2';
+
+/** Props for the EventPreviewOverlay component */
 type EventPreviewOverlayProps = {
-  event: EventSummary
-  onClose: () => void
-}
+  /** Event data to display in the overlay */
+  event: EventSummary;
+  /** Callback fired when overlay should close (ESC, backdrop click, or back button) */
+  onClose: () => void;
+};
 
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return 'Date TBA'
-  const date = new Date(dateStr)
-  const now = new Date()
-  const isToday = date.getDate() === now.getDate() &&
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear()
-
-  if (isToday) {
-    const timeStr = new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    }).format(date)
-    return `Today @ ${timeStr}`
+/**
+ * Formats event date using date-fns.
+ * Returns "Today @ time" for today's events, otherwise "M/D @ time".
+ */
+const formatEventDate = (dateStr?: string): string => {
+  if (!dateStr) return 'Date TBA';
+  try {
+    const date = parseISO(dateStr);
+    if (isToday(date)) {
+      return `Today @ ${format(date, 'h:mm a')}`;
+    }
+    return format(date, 'M/d @ h:mm a');
+  } catch {
+    return 'Date TBA';
   }
+};
 
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date).replace(',', ' @')
-}
-
+/**
+ * Modal overlay component for event preview/details.
+ * 
+ * Features:
+ * - Responsive tag display (adapts to screen width)
+ * - Closes on ESC key or backdrop click
+ * - Floating back/more-info buttons
+ * - Scrollable description area
+ */
 const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
 
-  // Close on Escape
+  /**
+   * Close overlay when user presses Escape key.
+   * Registers global keydown listener on mount, cleans up on unmount.
+   */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
-  // Adaptive Tag Counting
-  const [visibleCount, setVisibleCount] = useState(3)
+  // ----- Adaptive Tag Counting -----
+  // Number of tags to display before showing "+N" badge
+  // Adjusts based on screen width for responsive layout
+  const [visibleCount, setVisibleCount] = useState(3);
 
+  /**
+   * Adjusts visible tag count based on viewport width.
+   * - < 640px: Hide all tags (mobile)
+   * - < 1280px: Show 1 tag (tablet)
+   * - >= 1280px: Show 3 tags (desktop)
+   */
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth
+      const width = window.innerWidth;
       if (width < 640) {
-        setVisibleCount(0)
+        setVisibleCount(0);
       } else if (width < 1280) {
-        setVisibleCount(1)
+        setVisibleCount(1);
       } else {
-        setVisibleCount(3)
+        setVisibleCount(3);
       }
-    }
+    };
 
-    // Initial check
-    handleResize()
+    // Initial check on mount
+    handleResize();
 
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Split address if possible or just use location
   const locationString = '1410 NE Campus Parkway\nSeattle, WA 98195' // Hardcoded for demo/mock as most mocks lack full address
@@ -184,7 +212,7 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
 
             {/* Date Badge Overlay */}
             <div className="absolute top-8 right-8 rounded-full bg-motion-orange px-8 py-3 text-lg font-medium text-white">
-              {formatDate(event.startsAt || event.datetime)}
+              {formatEventDate(event.startsAt || event.datetime)}
             </div>
           </div>
         </div>

@@ -1,14 +1,27 @@
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { api } from '../lib/api'
-import LocationAutocomplete from '../components/LocationAutocomplete'
-import ImagePicker from '../components/ImagePicker'
-import TagInput from '../components/TagInput'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { GoChevronDown, GoCheck } from "react-icons/go";
-import { useAuth } from '../context/AuthContext'
+/**
+ * @file Event creation and editing page.
+ * 
+ * Dual-mode form that handles both creating new events and editing existing ones.
+ * Uses react-hook-form with Zod validation. Supports header/gallery images,
+ * location autocomplete, tags, and visibility settings.
+ * 
+ * @example
+ * // Create mode: /events/create
+ * // Edit mode: /events/:id/edit
+ */
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { api } from '../lib/api';
+import { VISIBILITY_OPTIONS } from '../constants';
+import LocationAutocomplete from '../components/LocationAutocomplete';
+import ImagePicker from '../components/ImagePicker';
+import TagInput from '../components/TagInput';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { GoChevronDown, GoCheck } from 'react-icons/go';
+import { useAuth } from '../context/AuthContext';
 
 // Schema Definition
 const eventSchema = z.object({
@@ -47,13 +60,7 @@ const CreateEventPage = () => {
   const [galleryImages, setGalleryImages] = useState<File[]>([])
   const [isVisibilityOpen, setIsVisibilityOpen] = useState(false)
 
-  const visibilityOptions = [
-    { value: 'public', label: 'Public' },
-    { value: 'mutuals', label: 'Mutuals' },
-    { value: 'followers', label: 'Followers' },
-    { value: 'friends', label: 'Friends' },
-    { value: 'private', label: 'Private' },
-  ];
+
 
   const {
     register,
@@ -393,14 +400,14 @@ const CreateEventPage = () => {
                     // No shadow, mimicking input style
                     className="flex w-full items-center justify-between rounded-sm bg-white p-4 text-left text-black outline-none border border-transparent transition-all focus:shadow-[0_0_0_2px_#5F0589]"
                   >
-                    <span>{visibilityOptions.find(opt => opt.value === currentVisibility)?.label || currentVisibility}</span>
+                    <span>{VISIBILITY_OPTIONS.find(opt => opt.value === currentVisibility)?.label || currentVisibility}</span>
                     <GoChevronDown className={`text-xl transition-transform ${isVisibilityOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {isVisibilityOpen && (
                     <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
                       <div className="py-1">
-                        {visibilityOptions.map((opt, idx) => (
+                        {VISIBILITY_OPTIONS.map((opt, idx) => (
                           <button
                             key={`${opt.label}-${idx}`}
                             type="button"

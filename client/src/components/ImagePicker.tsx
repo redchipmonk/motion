@@ -1,16 +1,41 @@
+/**
+ * @file Image upload component with drag-and-drop reordering.
+ * 
+ * Supports single or multiple image uploads with preview thumbnails.
+ * In 'stack' mode, allows drag-and-drop reordering of images.
+ * Optional decorative circles for visual appeal on empty state.
+ * 
+ * @example
+ * <ImagePicker images={files} onChange={setFiles} multiple mode="stack" />
+ */
+
 import { useRef, useState, useEffect, type ChangeEvent, type DragEvent } from "react";
 import { GoPlus } from "react-icons/go";
 
 interface ImagePickerProps {
+  /** Optional label displayed above the picker */
   label?: string;
+  /** Currently selected image files (controlled component) */
   images: File[];
+  /** Callback fired when images change (add, remove, or reorder) */
   onChange: (files: File[]) => void;
+  /** Allow multiple image selection */
   multiple?: boolean;
-  className?: string; // For custom height/styles (e.g. header vs gallery)
+  /** Additional CSS classes for custom sizing */
+  className?: string;
+  /** Show decorative circles on empty state */
   withDecoration?: boolean;
-  mode?: 'grid' | 'stack'; // 'stack' is now the vertical draggable gallery
+  /** Layout mode: 'grid' for standard, 'stack' for vertical with drag-reorder */
+  mode?: 'grid' | 'stack';
 }
 
+/**
+ * Image picker component with preview and optional drag-and-drop reordering.
+ * 
+ * Modes:
+ * - 'grid': Simple grid layout, click anywhere to add images
+ * - 'stack': Vertical layout with dedicated add button and draggable thumbnails
+ */
 const ImagePicker = ({
   label,
   images,
@@ -20,28 +45,36 @@ const ImagePicker = ({
   withDecoration = false,
   mode = 'grid'
 }: ImagePickerProps) => {
+  // Hidden file input ref - triggered programmatically
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Object URLs for image previews
   const [previews, setPreviews] = useState<string[]>([]);
+  // Currently dragged image index (for reordering)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-
-
-  // Sync previews when images prop changes
+  /**
+   * Syncs preview URLs when images prop changes.
+   * Creates object URLs for thumbnails and revokes old ones to prevent memory leaks.
+   */
   useEffect(() => {
     // Revoke old previews to avoid memory leaks
     previews.forEach((p) => URL.revokeObjectURL(p));
 
-    // Create new previews
+    // Create new previews from current images
     const newPreviews = images.map((file) => URL.createObjectURL(file));
     setPreviews(newPreviews);
 
-    // Cleanup function to revoke URLs when component unmounts or images change
+    // Cleanup: revoke URLs when component unmounts or images change
     return () => {
       newPreviews.forEach((p) => URL.revokeObjectURL(p));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [images])
+  }, [images]);
 
+  /**
+   * Handles file input change event.
+   * Appends new files when multiple=true, replaces when single selection.
+   */
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
@@ -50,30 +83,49 @@ const ImagePicker = ({
     }
   };
 
+  /**
+   * Removes an image at the specified index.
+   */
   const removeImage = (index: number) => {
-    const newFiles = images.filter((_, i) => i !== index)
-    onChange(newFiles)
-  }
+    const newFiles = images.filter((_, i) => i !== index);
+    onChange(newFiles);
+  };
 
+  /** Programmatically opens the file picker dialog */
   const triggerPicker = () => {
     fileInputRef.current?.click();
   };
 
-  // --- Drag and Drop Logic ---
+  // Drag and Drop Handlers
+  // These enable reordering of images in 'stack' mode
+
+  /**
+   * Called when drag starts on an image.
+   * Stores the index of the dragged item.
+   */
   const handleDragStart = (e: DragEvent<HTMLDivElement>, index: number) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = "move";
   };
 
+  /**
+   * Called when dragging over a drop target.
+   * Prevents default to allow drop.
+   */
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   };
 
+  /**
+   * Called when dropping on a target.
+   * Reorders the images array by moving dragged item to drop position.
+   */
   const handleDrop = (e: DragEvent<HTMLDivElement>, dropIndex: number) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === dropIndex) return;
 
+    // Create new array with reordered items
     const newImages = [...images];
     const [draggedItem] = newImages.splice(draggedIndex, 1);
     newImages.splice(dropIndex, 0, draggedItem);
@@ -84,9 +136,10 @@ const ImagePicker = ({
 
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* Optional Label */}
       {label && <label className="text-sm font-medium text-gray-700">{label}</label>}
 
-      {/* Hidden Input */}
+      {/* Hidden File Input - triggered by clicking picker area */}
       <input
         ref={fileInputRef}
         type="file"
@@ -96,15 +149,16 @@ const ImagePicker = ({
         onChange={handleFileChange}
       />
 
-      {/* RENDER LOGIC */}
+      {/* Render Logic */}
       {mode === 'stack' && multiple ? (
         <div className="flex flex-col pt-4 space-y-4">
-          {/* 1. Add Button (Fixed Top) */}
+          {/* Add Button */}
           <div
             onClick={triggerPicker}
             className="relative z-50 flex aspect-square w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl bg-white shadow-lg transition-all hover:bg-gray-50 border-2 border-transparent"
             style={{ minHeight: withDecoration ? "200px" : undefined }}
           >
+            {/* Decorative Circles */}
             {withDecoration && (
               <div className="absolute -bottom-24 -left-4 h-48 w-48 pointer-events-none opacity-50">
                 <span className="absolute -left-8 bottom-0 h-32 w-32 rounded-full bg-[#EA580C]" />
@@ -115,7 +169,7 @@ const ImagePicker = ({
             <GoPlus className="z-10 text-8xl text-motion-lilac" />
           </div>
 
-          {/* 2. Draggable Grid (Scrollable) */}
+          {/* Draggable Image Grid - scrollable container */}
           {previews.length > 0 && (
             <div className="grid grid-cols-2 gap-4 overflow-y-auto max-h-80 pr-1 pb-4">
               {previews.map((src, i) => (
@@ -132,6 +186,7 @@ const ImagePicker = ({
                     alt={`Preview ${i}`}
                     className="h-full w-full rounded-xl object-cover shadow-sm border-2 border-transparent group-hover:border-motion-lilac"
                   />
+                  {/* Remove Button */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -149,14 +204,16 @@ const ImagePicker = ({
         </div>
       ) : (
         // Standard Grid / Single Mode
+        // Click anywhere to open file picker
         <div
           onClick={triggerPicker}
-          className={`relative flex h-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl bg-gray-50 transition-colors hover:bg-gray-100 shadow-[0_4px_4px_rgba(0,0,0,0.15)] ${previews.length > 0 ? "border-none" : "border-2 border-transparent"
-            }`}
+          className={`relative flex h-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl bg-gray-50 transition-colors hover:bg-gray-100 shadow-[0_4px_4px_rgba(0,0,0,0.15)] ${previews.length > 0 ? "border-none" : "border-2 border-transparent"}`}
           style={{ minHeight: withDecoration ? "460px" : undefined }}
         >
           {previews.length > 0 ? (
+            // Show previews
             multiple ? (
+              // Multiple: grid of thumbnails with add button
               <div className="grid w-full grid-cols-2 gap-2 p-2">
                 {previews.map((src, i) => (
                   <img
@@ -171,6 +228,7 @@ const ImagePicker = ({
                 </div>
               </div>
             ) : (
+              // Single: full-size preview
               <img
                 src={previews[0]}
                 alt="Preview"
@@ -178,14 +236,15 @@ const ImagePicker = ({
               />
             )
           ) : (
+            // Empty State
             <div className="relative flex h-full w-full flex-col items-center justify-center text-gray-400">
               {withDecoration && (
                 <div className="absolute -bottom-44 -left-4 h-64 w-64 pointer-events-none">
-                  {/* Orange - Back Left */}
+                  {/* Orange circle - Back Left */}
                   <span className="absolute -left-12 -bottom-2 h-56 w-56 rounded-full bg-[#EA580C]" />
-                  {/* Yellow - Back Right */}
+                  {/* Yellow circle - Back Right */}
                   <span className="absolute left-12 -bottom-16 h-56 w-56 rounded-full bg-[#FACC15]" />
-                  {/* Purple - Front Center */}
+                  {/* Purple circle - Front Center */}
                   <span className="absolute -left-4 -bottom-24 h-56 w-56 rounded-full bg-[#C084FC]" />
                 </div>
               )}

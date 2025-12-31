@@ -13,6 +13,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@react-oauth/google": "^0.13.4",
+    "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "deps": "^1.0.0",
     "leaflet": "^1.9.4",
@@ -22,6 +23,7 @@
     "react-icons": "^5.5.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.9.6",
+    "use-debounce": "^10.0.6",
     "zod": "^4.2.1"
   },
   "devDependencies": {

@@ -1,6 +1,10 @@
-import { QueryFilter } from "mongoose";
 import { Rsvp, RsvpDocument, RsvpModel } from "../models/rsvp";
 import { Event } from "../models/event";
+import {
+  ERROR_FORBIDDEN,
+  ERROR_EVENT_NOT_FOUND,
+  ERROR_HOST_CANNOT_RSVP
+} from "../constants";
 
 export interface CreateRsvpInput {
   event: RsvpDocument["event"];
@@ -22,9 +26,9 @@ export class RsvpService {
   async createRsvp(payload: CreateRsvpInput) {
     // Prevent hosts from RSVPing to their own events
     const eventDoc = await Event.findById(payload.event);
-    if (!eventDoc) throw new Error("Event not found");
+    if (!eventDoc) throw new Error(ERROR_EVENT_NOT_FOUND);
     if (eventDoc.createdBy.toString() === payload.user.toString()) {
-      throw new Error("Hosts cannot RSVP to their own events");
+      throw new Error(ERROR_HOST_CANNOT_RSVP);
     }
 
     const rsvp = new this.rsvpModel(payload);
@@ -66,7 +70,7 @@ export class RsvpService {
     return this.rsvpModel.findById(id).exec();
   }
 
-  async listRsvps(filter: QueryFilter<RsvpDocument> = {}) {
+  async listRsvps(filter: Record<string, unknown> = {}) {
     return this.rsvpModel.find(filter).exec();
   }
 
@@ -83,7 +87,7 @@ export class RsvpService {
     if (!rsvp) return null;
 
     if (rsvp.user.toString() !== userId.toString()) {
-      throw new Error("Forbidden");
+      throw new Error(ERROR_FORBIDDEN);
     }
 
     const oldVal = rsvp.status === "going" ? 1 + (rsvp.plusOnes || 0) : 0;
@@ -139,7 +143,7 @@ export class RsvpService {
     if (!rsvp) return null;
 
     if (rsvp.user.toString() !== userId.toString()) {
-      throw new Error("Forbidden");
+      throw new Error(ERROR_FORBIDDEN);
     }
 
     if (rsvp.status === "going") {

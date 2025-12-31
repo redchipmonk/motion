@@ -1,35 +1,68 @@
-import type { KeyboardEvent } from 'react'
-import { cn } from '../theme'
-import type { EventSummary } from '../types'
+/**
+ * @file Reusable event card component.
+ * 
+ * Displays event summary with hero image, title, host, datetime, and optional tags.
+ * Supports three variants: 'list' (feed), 'map' (marker popup), and 'preview' (compact).
+ * 
+ * @example
+ * <EventCard event={event} variant="list" onSelect={handleSelect} />
+ */
 
-type EventCardVariant = 'list' | 'map' | 'preview'
+import type { KeyboardEvent } from 'react';
+import { cn } from '../theme';
+import type { EventSummary } from '../types';
+
+type EventCardVariant = 'list' | 'map' | 'preview';
 
 type EventCardProps = {
-  event: EventSummary
-  variant?: EventCardVariant
-  isActive?: boolean
-  onSelect?: (eventId: string) => void
-}
+  /** Event data to display */
+  event: EventSummary;
+  /** Card layout variant - affects sizing and visible elements */
+  variant?: EventCardVariant;
+  /** Whether this card is currently selected/active */
+  isActive?: boolean;
+  /** Callback fired when card is clicked or activated via keyboard */
+  onSelect?: (eventId: string) => void;
+};
 
+/**
+ * Tailwind class strings for each card variant.
+ * All variants share base styling but differ in border-radius.
+ */
 const VARIANT_STYLES: Record<EventCardVariant, string> = {
   list: 'rounded-[28px] bg-white border border-[#f0ebff] shadow-[0_4px_4px_rgba(0,0,0,0.15)] p-0',
   map: 'rounded-2xl bg-white border border-[#f0ebff] shadow-[0_4px_4px_rgba(0,0,0,0.15)] p-0',
   preview: 'rounded-2xl bg-white border border-[#f0ebff] shadow-[0_4px_4px_rgba(0,0,0,0.15)] p-0',
-}
+};
 
+/**
+ * Event card component displaying event summary information.
+ * 
+ * Accessibility:
+ * - Uses role="button" for clickable card semantics
+ * - Supports keyboard activation via Enter/Space
+ * - aria-pressed indicates active state
+ */
 const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: EventCardProps) => {
-  const { id, title, host, datetime, distance, tags = [], heroImageUrl } = event
+  // Destructure event data for easier access
+  const { id, title, host, datetime, distance, tags = [], heroImageUrl } = event;
 
-  const handleActivate = () => onSelect?.(id)
+  /** Triggers the onSelect callback with this event's ID */
+  const handleActivate = () => onSelect?.(id);
 
+  /**
+   * Handles keyboard navigation for accessibility.
+   * Activates card on Enter or Space key press.
+   */
   const handleKeyDown = (e: KeyboardEvent<HTMLElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      handleActivate()
+      e.preventDefault();
+      handleActivate();
     }
-  }
+  };
 
   return (
+    // Card Container
     <article
       data-testid="event-card"
       role="button"
@@ -39,21 +72,28 @@ const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: Even
       onClick={handleActivate}
       onKeyDown={handleKeyDown}
       className={cn(
+        // Base interactive styles
         'cursor-pointer overflow-hidden transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-motion-purple focus-visible:ring-offset-2 focus-visible:ring-offset-motion-warmWhite',
+        // Hover and active states
         'hover:shadow-[0_6px_10px_rgba(0,0,0,0.18)] active:border-motion-purple active:shadow-[0_6px_12px_rgba(95,5,137,0.25)]',
+        // Variant-specific styles
         VARIANT_STYLES[variant],
+        // Active selection state
         isActive && 'border-motion-purple shadow-[0_6px_12px_rgba(95,5,137,0.25)]',
       )}
     >
+      {/* Hero Image Section */}
       <div className="relative">
         <img
           src={heroImageUrl}
           alt={title}
           className={cn(
             "w-full object-cover",
+            // Preview variant has smaller image height
             variant === 'preview' ? "h-24" : "h-32"
           )}
         />
+        {/* Date Badge - shown on list and map variants, positioned top-right */}
         {variant !== 'preview' && (
           <span
             data-testid="event-card-datetime"
@@ -64,19 +104,24 @@ const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: Even
         )}
       </div>
 
+      {/* Card Content Section */}
       {variant === 'preview' ? (
+        // Preview variant: compact orange bar with condensed info
         <div className="bg-motion-orange px-3 py-2 text-white">
           <p className="line-clamp-2 text-xs font-bold leading-tight" style={{ overflowWrap: 'anywhere' }}>
             {title} hosted by {host} <span className="opacity-80">@ {datetime.split('·')[1]?.trim() || datetime}</span>
           </p>
         </div>
       ) : (
+        // List/Map variants: full content with title, distance, and optional tags
         <div className="space-y-2 px-4 pb-4 pt-3">
+          {/* Title Row - title truncates, distance stays fixed width */}
           <div className="flex items-center justify-between gap-3">
             <p className="min-w-0 truncate text-base font-semibold text-motion-plum">{`${title} hosted by ${host}`}</p>
             {distance && <p className="shrink-0 text-sm text-motion-plum/70">{distance}</p>}
           </div>
 
+          {/* Tags - only shown in 'map' variant (list variant omits for cleaner look) */}
           {variant !== 'list' && tags.length > 0 && (
             <ul className="flex flex-wrap gap-2">
               {tags.map((tag) => (
@@ -89,7 +134,7 @@ const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: Even
         </div>
       )}
     </article>
-  )
-}
+  );
+};
 
-export default EventCard
+export default EventCard;
