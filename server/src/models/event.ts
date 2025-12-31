@@ -12,12 +12,15 @@ export interface EventDocument extends Document {
   dateTime: Date;
   endDateTime?: Date;
   capacity?: number;
-  status: "published" | "past";
+  status: "published" | "past" | "draft";
   location: EventLocation;
   images: string[];
+  tags: string[];
   price?: number;
   createdBy: mongoose.Types.ObjectId;
   participantCount: number;
+  visibility: "public" | "mutuals" | "followers" | "friends" | "private";
+  hideLocation: boolean;
 }
 
 const locationSchema = new Schema<EventLocation>(
@@ -54,11 +57,18 @@ const eventSchema = new Schema<EventDocument>(
     capacity: { type: Number, min: 0 },
     status: {
       type: String,
-      enum: ["published", "past"],
+      enum: ["published", "past", "draft"],
       default: "published",
     },
+    visibility: {
+      type: String,
+      enum: ["public", "mutuals", "followers", "friends", "private"],
+      default: "public",
+    },
+    hideLocation: { type: Boolean, default: false },
     location: { type: locationSchema, required: true },
     images: { type: [String], default: [] },
+    tags: { type: [String], default: [] },
     price: Number,
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     participantCount: { type: Number, default: 0 },

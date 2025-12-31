@@ -5,7 +5,7 @@ import AuthPage from './pages/AuthPage'
 import AppLayout from './pages/AppLayout'
 import EventsPage from './pages/EventsPage'
 import EventDetailPage from './pages/EventDetailPage'
-import AddEventPage from './pages/AddEventPage'
+import CreateEventPage from './pages/CreateEventPage'
 import MyEventsPage from './pages/MyEventsPage'
 import ProfilePage from './pages/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -24,7 +24,7 @@ const App = () => (
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:eventId" element={<EventDetailPage />} />
-          <Route path="/add-event" element={<AddEventPage />} />
+          <Route path="/add-event" element={<CreateEventPage />} />
           <Route path="/my-events" element={<MyEventsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>

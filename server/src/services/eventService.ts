@@ -13,7 +13,10 @@ export interface CreateEventInput {
     longitude: number;
   };
   images?: string[];
+  tags?: string[];
   price?: number;
+  visibility?: "public" | "mutuals" | "followers" | "friends" | "private";
+  hideLocation?: boolean;
   createdBy: mongoose.Types.ObjectId | string;
 }
 
@@ -23,13 +26,16 @@ export interface UpdateEventInput {
   dateTime?: Date;
   endDateTime?: Date;
   capacity?: number;
-  status?: "published" | "past";
+  status?: "published" | "past" | "draft";
+  visibility?: "public" | "mutuals" | "followers" | "friends" | "private";
+  hideLocation?: boolean;
   location?: {
     address: string;
     latitude: number;
     longitude: number;
   };
   images?: string[];
+  tags?: string[];
   price?: number;
 }
 

@@ -62,6 +62,10 @@ class Api {
   delete<T>(endpoint: string, options?: RequestOptions) {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
+
+  createEvent(eventData: unknown) {
+    return this.post('/events', eventData);
+  }
 }
 
 export const api = new Api();

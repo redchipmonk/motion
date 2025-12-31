@@ -50,7 +50,7 @@ eventsRouter.get("/feed", asyncHandler(async (req, res) => {
  */
 eventsRouter.post("/", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
   const body = req.body as CreateEventBody;
-  if (!body.title || !body.description || !body.dateTime || !body.location || !body.createdBy) {
+  if (!body.title || !body.description || !body.dateTime || !body.location) {
     return res.status(400).json({ error: "Missing required fields" });
   }
   if (isNaN(Date.parse(body.dateTime))) {
