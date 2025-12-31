@@ -4,6 +4,7 @@
  * Tests the protectedRoute middleware with mocked request/response.
  */
 
+/* eslint-disable @typescript-eslint/unbound-method */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Response, NextFunction } from 'express';
 import { protectedRoute, AuthRequest } from './auth';
@@ -69,9 +70,8 @@ describe('protectedRoute middleware', () => {
     mockReq.headers = { authorization: `Bearer ${token}` };
 
     // Mock User.findById to return null
-    vi.mocked(User.findById).mockReturnValue({
-      select: vi.fn().mockResolvedValue(null),
-    } as never);
+    const mockSelect = vi.fn().mockResolvedValue(null);
+    vi.mocked(User.findById).mockReturnValue({ select: mockSelect } as never);
 
     await protectedRoute(mockReq as AuthRequest, mockRes as Response, mockNext);
 
@@ -87,9 +87,8 @@ describe('protectedRoute middleware', () => {
     mockReq.headers = { authorization: `Bearer ${token}` };
 
     // Mock User.findById to return a user
-    vi.mocked(User.findById).mockReturnValue({
-      select: vi.fn().mockResolvedValue(mockUser),
-    } as never);
+    const mockSelect = vi.fn().mockResolvedValue(mockUser);
+    vi.mocked(User.findById).mockReturnValue({ select: mockSelect } as never);
 
     await protectedRoute(mockReq as AuthRequest, mockRes as Response, mockNext);
 

@@ -5,7 +5,7 @@
  * Google token verification is not unit tested as it requires external API.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { AuthService } from './authService';
 import jwt from 'jsonwebtoken';
 
