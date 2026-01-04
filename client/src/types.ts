@@ -22,3 +22,22 @@ export type EventSummary = {
     coordinates: [number, number]; // [longitude, latitude] per GeoJSON
   };
 };
+
+/**
+ * API response type for /events/feed endpoint.
+ * Represents raw event data from the backend before transformation.
+ */
+export interface EventFeedItem {
+  _id: string;
+  title: string;
+  dateTime: string;
+  distance?: number; // in meters
+  tags?: string[];
+  images?: string[];
+  location: {
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+  creatorDetails?: {
+    name: string;
+  };
+}

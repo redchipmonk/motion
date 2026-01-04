@@ -16,7 +16,7 @@ import Map from '../components/Map/Map'
 import EventMarker from '../components/Map/EventMarker'
 import EventPreviewOverlay from '../components/EventPreviewOverlay'
 import { api } from '../lib/api'
-import type { EventSummary } from '../types'
+import type { EventSummary, EventFeedItem } from '../types'
 import { useAuth } from '../context/AuthContext'
 
 const EventsPage = () => {
@@ -39,7 +39,7 @@ const EventsPage = () => {
         const long = -122.3001
         const radius = 10 // km
 
-        const data = await api.get<any[]>(
+        const data = await api.get<EventFeedItem[]>(
           `/events/feed?userId=${user._id}&lat=${lat}&long=${long}&radius=${radius}`
         )
 
@@ -47,7 +47,7 @@ const EventsPage = () => {
 
         // Transform backend response to EventSummary format
         if (data && data.length > 0) {
-          const transformedEvents: EventSummary[] = data.map((event: any) => ({
+          const transformedEvents: EventSummary[] = data.map((event) => ({
             id: event._id,
             title: event.title,
             host: event.creatorDetails?.name || 'Unknown Host',
