@@ -2,7 +2,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
@@ -29,14 +28,14 @@ export class AuthService {
    * Security: Tokens are signed with a secret key and have an expiration (7d) to limit session lifetime.
    */
   static generateToken(userId: string): string {
-    return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: "7d" });
+    return jwt.sign({ id: userId }, process.env.JWT_SECRET || "default_secret", { expiresIn: "7d" });
   }
 
   /**
    * Verifies the JWT and returns the payload.
    */
   static verifyToken(token: string): string | jwt.JwtPayload {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(token, process.env.JWT_SECRET || "default_secret");
   }
 
   /**

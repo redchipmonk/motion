@@ -34,10 +34,11 @@ class Api {
 
     const response = await fetch(url, { ...options, headers });
 
-    // Handle 401 Unauthorized (token expired/invalid) - optional: clear token/redirect
+    // Handle 401 Unauthorized (token expired/invalid)
     if (response.status === 401) {
-      // localStorage.removeItem('token');
-      // window.location.href = '/login';
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
     }
 
     const data = await response.json();

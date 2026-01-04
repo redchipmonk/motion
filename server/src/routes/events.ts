@@ -67,6 +67,10 @@ eventsRouter.post("/", protectedRoute, asyncHandler(async (req: AuthRequest, res
     createdBy: req.user!._id, // Enforce creator verification
     capacity: body.capacity,
     images: body.images,
+    tags: body.tags,
+    visibility: body.visibility,
+    hideLocation: body.hideLocation,
+    price: body.price,
   };
 
   const event = await eventService.createEvent(input);

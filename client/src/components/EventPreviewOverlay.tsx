@@ -14,15 +14,17 @@ import { format, isToday, parseISO } from 'date-fns';
 import { motionTheme, cn } from '../theme';
 import type { EventSummary } from '../types';
 import { Tooltip } from './Tooltip';
-import { HiArrowLongLeft, HiArrowLongRight } from 'react-icons/hi2';
+import { HiArrowLongLeft, HiArrowLongRight, HiXMark } from 'react-icons/hi2';
+import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2';
 
-/** Props for the EventPreviewOverlay component */
 type EventPreviewOverlayProps = {
   /** Event data to display in the overlay */
   event: EventSummary;
   /** Callback fired when overlay should close (ESC, backdrop click, or back button) */
   onClose: () => void;
 };
+
+type RSVPStatus = 'going' | 'interested' | 'waitlist' | null;
 
 /**
  * Formats event date using date-fns.
@@ -49,8 +51,15 @@ const formatEventDate = (dateStr?: string): string => {
  * - Closes on ESC key or backdrop click
  * - Floating back/more-info buttons
  * - Scrollable description area
+ * - Comprehensive RSVP button states based on capacity and user status
  */
 const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
+  // Mock RSVP status - in production, fetch this from API based on event.id
+  const [userRsvpStatus, setUserRsvpStatus] = useState<RSVPStatus>(null);
+
+  // Mock event capacity data - in production, fetch from event details
+  const [eventCapacity] = useState<{ current: number; max: number }>({ current: 25, max: 30 });
+  const isCapacityFull = eventCapacity.current >= eventCapacity.max;
 
   /**
    * Close overlay when user presses Escape key.
@@ -64,7 +73,7 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // ----- Adaptive Tag Counting -----
+  // Adaptive Tag Counting
   // Number of tags to display before showing "+N" badge
   // Adjusts based on screen width for responsive layout
   const [visibleCount, setVisibleCount] = useState(3);
@@ -97,13 +106,184 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
   // Split address if possible or just use location
   const locationString = '1410 NE Campus Parkway\nSeattle, WA 98195' // Hardcoded for demo/mock as most mocks lack full address
 
+  /**
+   * Handles RSVP action based on user's current status and event capacity.
+   * In production, this would call the appropriate API endpoint.
+   */
+  const handleRsvpAction = (action: 'going' | 'interested' | 'waitlist' | 'cancel' | 'remove') => {
+    switch (action) {
+      case 'going':
+        if (isCapacityFull) {
+          setUserRsvpStatus('waitlist');
+          // API: createRsvp({ eventId: event.id, status: 'waitlist' })
+        } else {
+          setUserRsvpStatus('going');
+          // API: createRsvp({ eventId: event.id, status: 'going' })
+        }
+        break;
+      case 'interested':
+        setUserRsvpStatus('interested');
+        // API: createRsvp({ eventId: event.id, status: 'interested' })
+        break;
+      case 'waitlist':
+        setUserRsvpStatus('waitlist');
+        // API: createRsvp({ eventId: event.id, status: 'waitlist' })
+        break;
+      case 'cancel':
+        setUserRsvpStatus(null);
+        // API: deleteRsvp({ eventId: event.id })
+        break;
+      case 'remove':
+        setUserRsvpStatus(null);
+        // API: deleteRsvp({ eventId: event.id })
+        break;
+    }
+  };
+
+  /**
+   * Renders appropriate RSVP buttons based on user's current RSVP status and event capacity.
+   */
+  const renderRSVPButtons = () => {
+    // User has not RSVPed
+    if (!userRsvpStatus) {
+      return (
+        <div className="flex gap-3 mt-6 items-center">
+          {/* Primary: RSVP (or Join Waitlist if full) */}
+          <button
+            onClick={() => handleRsvpAction(isCapacityFull ? 'waitlist' : 'going')}
+            className={cn(
+              "flex-1 rounded-2xl py-2 text-center text-2xl font-bold text-white transition-colors border-2 border-transparent",
+              "bg-motion-purple",
+              "hover:border-motion-orange",
+              "active:bg-motion-orange active:border-motion-orange"
+            )}
+          >
+            {isCapacityFull ? 'Join Waitlist' : 'RSVP'}
+          </button>
+          {/* Secondary: Bookmark (Interested) - Outline icon when not interested */}
+          <button
+            onClick={() => handleRsvpAction('interested')}
+            className={cn(
+              "rounded-xl p-3 transition-colors border-2 border-transparent",
+              "bg-motion-yellow",
+              "hover:border-motion-orange",
+              "active:bg-motion-orange active:border-motion-orange"
+            )}
+          >
+            <HiOutlineBookmark className="text-3xl text-motion-purple" />
+          </button>
+        </div>
+      );
+    }
+
+    // User is Going
+    if (userRsvpStatus === 'going') {
+      return (
+        <div className="flex gap-3 mt-6 items-center">
+          {/* RSVP active state with hover to cancel */}
+          <button
+            onClick={() => handleRsvpAction('cancel')}
+            className={cn(
+              "group flex-1 rounded-2xl py-2 text-center text-2xl font-bold text-white transition-colors border-2 border-transparent",
+              "bg-motion-purple",
+              "hover:border-motion-orange",
+              "active:bg-motion-orange active:border-motion-orange"
+            )}
+          >
+            <span className="group-hover:hidden">RSVPed</span>
+            <span className="hidden group-hover:inline">Cancel RSVP</span>
+          </button>
+          {/* Bookmark button for saving while going */}
+          <button
+            onClick={() => handleRsvpAction('interested')}
+            className={cn(
+              "rounded-xl p-3 transition-colors border-2 border-transparent",
+              "bg-motion-yellow",
+              "hover:border-motion-orange",
+              "active:bg-motion-orange active:border-motion-orange"
+            )}
+          >
+            <HiOutlineBookmark className="text-3xl text-motion-purple" />
+          </button>
+        </div>
+      );
+    }
+
+    // User is Interested
+    if (userRsvpStatus === 'interested') {
+      return (
+        <div className="flex gap-3 mt-6 items-center">
+          {/* Primary: Upgrade to RSVP (if capacity allows) */}
+          <button
+            onClick={() => handleRsvpAction(isCapacityFull ? 'waitlist' : 'going')}
+            className={cn(
+              "flex-1 rounded-2xl py-2 text-center text-2xl font-bold text-white transition-colors border-2 border-transparent",
+              "bg-motion-purple",
+              "hover:border-motion-orange",
+              "active:bg-motion-orange active:border-motion-orange"
+            )}
+          >
+            {isCapacityFull ? 'Join Waitlist' : 'RSVP'}
+          </button>
+          {/* Secondary */}
+          <button
+            onClick={() => handleRsvpAction('remove')}
+            className={cn(
+              "group rounded-xl p-3 transition-colors border-2 border-transparent",
+              "bg-motion-yellow",
+              "hover:border-motion-orange",
+              "active:bg-motion-orange active:border-motion-orange"
+            )}
+          >
+            <HiBookmark className="text-3xl text-motion-purple group-hover:hidden" />
+            <HiXMark className="text-3xl text-motion-purple hidden group-hover:block" />
+          </button>
+        </div>
+      );
+    }
+
+    // User is on Waitlist
+    if (userRsvpStatus === 'waitlist') {
+      return (
+        <div className="flex gap-3 mt-6 items-center">
+          {/* Leave Waitlist */}
+          <button
+            onClick={() => handleRsvpAction('cancel')}
+            className={cn(
+              "flex-1 rounded-2xl py-2 text-center text-2xl font-bold transition-colors border-2",
+              "bg-white text-motion-purple border-motion-purple",
+              "hover:border-motion-orange hover:text-motion-orange",
+              "active:bg-motion-orange active:text-white active:border-motion-orange"
+            )}
+          >
+            Leave Waitlist
+          </button>
+          {/* Still offer Interested - Outline bookmark */}
+          <button
+            onClick={() => handleRsvpAction('interested')}
+            className={cn(
+              "rounded-xl p-3 transition-colors border-2 border-transparent",
+              "bg-motion-yellow",
+              "hover:border-motion-orange",
+              "active:bg-motion-orange active:border-motion-orange"
+            )}
+          >
+            <HiOutlineBookmark className="text-3xl text-motion-purple" />
+          </button>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div
       className="absolute inset-0 z-[50] flex items-center justify-center bg-motion-plum/40 p-4"
       onClick={onClose}
     >
       <div
-        className="relative w-full w-[90vw] animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-[90vw] animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Floating Back Button */}
@@ -125,7 +305,7 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
         </button>
 
         {/* Main Card */}
-        <div className={cn("flex rounded-[25px] bg-white h-[70vh]", motionTheme.shadows.soft)}>
+        <div className={cn("flex rounded-[25px] bg-white h-[65vh]", motionTheme.shadows.soft)}>
           {/* Left Content */}
           <div className="flex w-1/2 flex-col p-12 bg-motion-warmWhite min-w-0 rounded-l-[25px]">
 
@@ -191,15 +371,8 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
               </p>
             </div>
 
-            {/* Bottom: RSVP Button */}
-            <button
-              className={cn(
-                "mt-6 w-full rounded-2xl py-2 text-center text-2xl font-bold text-white transition-transform hover:scale-[1.02] active:scale-[0.98]",
-                "bg-motion-purple"
-              )}
-            >
-              {event.rsvpLabel || 'RSVP'}
-            </button>
+            {/* Bottom: RSVP Buttons */}
+            {renderRSVPButtons()}
           </div>
 
           {/* Right Image */}

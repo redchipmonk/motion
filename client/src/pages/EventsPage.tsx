@@ -17,8 +17,10 @@ import EventMarker from '../components/Map/EventMarker'
 import EventPreviewOverlay from '../components/EventPreviewOverlay'
 import { api } from '../lib/api'
 import type { EventSummary } from '../types'
+import { useAuth } from '../context/AuthContext'
 
 const EventsPage = () => {
+  const { user } = useAuth()
   const [events, setEvents] = useState<EventSummary[]>(MOCK_EVENTS)
   const [selectedEvent, setSelectedEvent] = useState<EventSummary | null>(null)
   // Capture "now" at mount/render time purely
@@ -26,17 +28,43 @@ const EventsPage = () => {
 
   useEffect(() => {
     const fetchEvents = async () => {
+      if (!user) {
+        console.warn('User not authenticated, using mock data')
+        return
+      }
+
       try {
-        // Attempt to fetch real events
-        // Note: We might need to map backend response to EventSummary if shapes differ.
-        // Assuming the API returns an array of events compatible with our types for now.
-        const data = await api.get<{ events: EventSummary[] } | EventSummary[]>('/events/feed')
+        // UW (University of Washington) Seattle campus coordinates
+        const lat = 47.6554
+        const long = -122.3001
+        const radius = 10 // km
 
-        // Handle various response structures
-        const list = Array.isArray(data) ? data : (data as { events: EventSummary[] }).events
+        const data = await api.get<any[]>(
+          `/events/feed?userId=${user._id}&lat=${lat}&long=${long}&radius=${radius}`
+        )
 
-        if (list && list.length > 0) {
-          setEvents(list)
+        console.log('Raw API response:', data)
+
+        // Transform backend response to EventSummary format
+        if (data && data.length > 0) {
+          const transformedEvents: EventSummary[] = data.map((event: any) => ({
+            id: event._id,
+            title: event.title,
+            host: event.creatorDetails?.name || 'Unknown Host',
+            datetime: new Date(event.dateTime).toLocaleString(),
+            startsAt: event.dateTime,
+            distance: event.distance ? `${(event.distance / 1000).toFixed(1)} km` : undefined,
+            tags: event.tags || [],
+            heroImageUrl: event.images?.[0] || '/placeholder-event.jpg',
+            location: {
+              coordinates: event.location.coordinates
+            }
+          }))
+
+          console.log('Transformed events:', transformedEvents)
+          setEvents(transformedEvents)
+        } else {
+          console.log('No events returned from API')
         }
       } catch (error) {
         console.warn('Failed to fetch events, using mock data:', error)
@@ -44,7 +72,7 @@ const EventsPage = () => {
     }
 
     fetchEvents()
-  }, [])
+  }, [user])
 
   return (
     <section className="relative h-full min-h-0 overflow-hidden">

@@ -21,14 +21,13 @@ import { motionTheme, cn } from "../theme";
 export type SortOption = "recommended" | "soonest" | "closest";
 export type TimeOption = "any" | "today" | "week" | "month";
 
-/** Props for the FilterPanel component */
 interface FilterPanelProps {
   /** Whether the panel is currently visible */
   isOpen: boolean;
   /** Callback to close the panel */
   onClose: () => void;
 
-  // ----- Filter State -----
+  // Filter State
   /** Currently selected time window filter */
   timeWindow: TimeOption;
   /** Setter for time window filter */
@@ -42,11 +41,11 @@ interface FilterPanelProps {
   /** Setter for sort order */
   setSortBy: (val: SortOption) => void;
 
-  // ----- Data -----
+  // Data
   /** All available tags extracted from events */
   allTags: string[];
 
-  // ----- Actions -----
+  // Actions
   /** Resets all filters to defaults */
   onClear: () => void;
   /** Applies filters and closes panel */
