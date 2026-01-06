@@ -93,7 +93,7 @@ export const FilterPanel = ({
     <div className="absolute inset-0 z-20">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-motion-plum/10 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-motion-plum/10"
         onClick={onClose} // Simple backdrop click to close
         aria-hidden="true"
       />
@@ -103,11 +103,23 @@ export const FilterPanel = ({
         role="dialog"
         aria-label="Filters"
         className={cn(
-          "absolute right-6 top-[88px] w-[340px] max-w-[calc(100%-48px)] rounded-3xl border bg-white p-5",
+          "absolute right-6 top-[88px] w-[340px] max-w-[calc(100%-48px)] rounded-3xl rounded-tr-none border bg-white p-5",
           motionTheme.borders.authInput,
-          motionTheme.shadows.softLg
+          motionTheme.shadows.soft
         )}
       >
+        {/* Triangle pointing to filter icon */}
+        <div className="absolute -top-[16px] right-[-1px]">
+          {/* Outer triangle for border */}
+          <div
+            className="absolute top-0 right-0 h-0 w-0 border-b-[17px] border-l-[17px] border-r-0 border-b-[#f0ebff] border-l-transparent border-r-transparent"
+          />
+          {/* Inner triangle for background */}
+          <div
+            className="absolute top-[2px] right-0 h-0 w-0 border-b-[16px] border-l-[16px] border-r-0 border-b-white border-l-transparent border-r-transparent"
+          />
+        </div>
+
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-base font-bold text-motion-plum">Filters</p>
@@ -234,8 +246,7 @@ export const FilterPanel = ({
             className={cn(
               "rounded-full border-2 border-transparent bg-motion-yellow px-5 py-2 text-sm font-bold transition",
               motionTheme.text.accent,
-              motionTheme.shadows.soft,
-              motionTheme.states.primaryHoverBorder,
+              "hover:border-motion-orange",
               motionTheme.states.primaryActiveBg,
               motionTheme.states.primaryActiveText
             )}

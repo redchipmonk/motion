@@ -324,7 +324,7 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
 
               {/* Tags Row */}
               <div
-                className="mt-3 flex flex-wrap gap-2"
+                className="mt-3 flex flex-wrap gap-2 items-center"
               >
                 {event.tags?.slice(0, visibleCount).map((tag: string) => (
                   <span
@@ -340,7 +340,7 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
                     side="bottom"
                     contentClassName="max-w-xs"
                   >
-                    <span className="rounded-full bg-motion-lilac px-6 py-2 text-md text-motion-purple cursor-help">
+                    <span className="inline-block rounded-full bg-motion-lilac px-6 py-2 text-md text-motion-purple cursor-help">
                       +{event.tags!.length - visibleCount}
                     </span>
                   </Tooltip>

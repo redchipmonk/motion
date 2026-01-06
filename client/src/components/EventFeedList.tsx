@@ -15,6 +15,7 @@ import EventCard from './EventCard';
 import { motionTheme, cn } from '../theme';
 import { MOCK_EVENTS } from '../data/mockData';
 import { FilterPanel, type SortOption, type TimeOption } from './FilterPanel';
+import { EVENT_TAGS } from '../constants';
 import type { EventSummary } from '../types';
 
 type EventFeedListProps = {
@@ -44,14 +45,9 @@ const EventFeedList = ({ onSelectEvent, events = MOCK_EVENTS }: EventFeedListPro
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
 
   /**
-   * Extracts unique tags from all events for the filter panel.
-   * Memoized to avoid recalculating on every render.
+   * Predefined tags from constants for the filter panel.
    */
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    events.forEach((event) => (event.tags ?? []).forEach((tag) => tags.add(tag)));
-    return Array.from(tags).sort((a, b) => a.localeCompare(b));
-  }, [events]);
+  const allTags = Array.from(EVENT_TAGS).sort((a, b) => a.localeCompare(b));
 
   /**
    * Filters and sorts events based on current tab, search term, and selected tags.
