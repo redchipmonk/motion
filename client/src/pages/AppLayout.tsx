@@ -9,7 +9,7 @@ const AppLayout = () => {
     <div className="flex h-screen flex-col overflow-hidden bg-motion-lavender text-motion-plum">
       <NavBar onSignOut={logout} />
       <main className="flex flex-1 min-h-0 overflow-hidden">
-        <div className="flex-1 min-h-0">
+        <div id="main-scroll-container" className="flex-1 min-h-0 overflow-y-auto">
           <Outlet />
         </div>
       </main>

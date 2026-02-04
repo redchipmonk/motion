@@ -13,7 +13,6 @@ import { format, parseISO } from 'date-fns';
 import { FaFilter } from 'react-icons/fa';
 import EventCard from './EventCard';
 import { motionTheme, cn } from '../theme';
-import { MOCK_EVENTS } from '../data/mockData';
 import { FilterPanel, type SortOption, type TimeOption } from './FilterPanel';
 import { EVENT_TAGS } from '../constants';
 import type { EventSummary } from '../types';
@@ -34,10 +33,10 @@ type EventFeedListProps = {
  * - Tag-based filtering via FilterPanel
  * - Chronological sorting (soonest first for upcoming, most recent first for past)
  */
-const EventFeedList = ({ onSelectEvent, events = MOCK_EVENTS }: EventFeedListProps) => {
+const EventFeedList = ({ onSelectEvent, events = [] }: EventFeedListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(events[0]?.id ?? null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);

@@ -14,6 +14,7 @@ import { format, isToday, parseISO } from 'date-fns';
 import { motionTheme, cn } from '../theme';
 import type { EventSummary } from '../types';
 import { Tooltip } from './Tooltip';
+import { useNavigate } from 'react-router-dom';
 import { HiArrowLongLeft, HiArrowLongRight, HiXMark } from 'react-icons/hi2';
 import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2';
 
@@ -54,6 +55,7 @@ const formatEventDate = (dateStr?: string): string => {
  * - Comprehensive RSVP button states based on capacity and user status
  */
 const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
+  const navigate = useNavigate();
   // Mock RSVP status - in production, fetch this from API based on event.id
   const [userRsvpStatus, setUserRsvpStatus] = useState<RSVPStatus>(null);
 
@@ -392,6 +394,7 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
 
         {/* Floating More Info Button */}
         <button
+          onClick={() => navigate(`/events/${event.id}`)}
           className={cn(
             "absolute -bottom-14 right-0 z-50 flex items-center gap-2 rounded-full px-12 py-1 text-xl font-medium text-motion-purple border-2 border-transparent transition-all duration-150",
             "bg-motion-yellow",

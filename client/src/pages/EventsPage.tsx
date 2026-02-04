@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import EventFeedList from '../components/EventFeedList'
 import { MOCK_EVENTS } from '../data/mockData'
 import Map from '../components/Map/Map'
@@ -18,11 +19,28 @@ import EventPreviewOverlay from '../components/EventPreviewOverlay'
 import { api } from '../lib/api'
 import type { EventSummary, EventFeedItem } from '../types'
 import { useAuth } from '../context/AuthContext'
+import { format } from 'date-fns';
+
+const transformEvent = (event: EventFeedItem): EventSummary => ({
+  id: event._id,
+  title: event.title,
+  host: event.creatorDetails?.name || 'Unknown Host',
+  datetime: format(new Date(event.dateTime), 'MMM d @ h:mm a'),
+  startsAt: event.dateTime,
+  distance: event.distance ? `${(event.distance / 1000).toFixed(1)} km` : undefined,
+  tags: event.tags || [],
+  heroImageUrl: event.images?.[0] || '/placeholder-event.jpg',
+  location: {
+    coordinates: event.location.coordinates
+  }
+});
 
 const EventsPage = () => {
   const { user } = useAuth()
-  const [events, setEvents] = useState<EventSummary[]>(MOCK_EVENTS)
+  const [events, setEvents] = useState<EventSummary[]>(() => MOCK_EVENTS.map(transformEvent)) // Initialize with transformed mock data
   const [selectedEvent, setSelectedEvent] = useState<EventSummary | null>(null)
+  const [mapCenter, setMapCenter] = useState<[number, number]>([47.6558, -122.3268])
+  const [searchParams, setSearchParams] = useSearchParams()
   // Capture "now" at mount/render time purely
   const [now] = useState(() => Date.now())
 
@@ -30,6 +48,7 @@ const EventsPage = () => {
     const fetchEvents = async () => {
       if (!user) {
         console.warn('User not authenticated, using mock data')
+        setEvents(MOCK_EVENTS.map(transformEvent))
         return
       }
 
@@ -47,20 +66,7 @@ const EventsPage = () => {
 
         // Transform backend response to EventSummary format
         if (data && data.length > 0) {
-          const transformedEvents: EventSummary[] = data.map((event) => ({
-            id: event._id,
-            title: event.title,
-            host: event.creatorDetails?.name || 'Unknown Host',
-            datetime: new Date(event.dateTime).toLocaleString(),
-            startsAt: event.dateTime,
-            distance: event.distance ? `${(event.distance / 1000).toFixed(1)} km` : undefined,
-            tags: event.tags || [],
-            heroImageUrl: event.images?.[0] || '/placeholder-event.jpg',
-            location: {
-              coordinates: event.location.coordinates
-            }
-          }))
-
+          const transformedEvents = data.map(transformEvent)
           console.log('Transformed events:', transformedEvents)
           setEvents(transformedEvents)
         } else {
@@ -68,16 +74,39 @@ const EventsPage = () => {
         }
       } catch (error) {
         console.warn('Failed to fetch events, using mock data:', error)
+        setEvents(MOCK_EVENTS.map(transformEvent))
       }
     }
 
     fetchEvents()
   }, [user])
 
+  // Handle URL query params for direct event navigation
+  useEffect(() => {
+    const eventIdParam = searchParams.get('eventId')
+    if (eventIdParam && events.length > 0) {
+      const targetEvent = events.find(e => e.id === eventIdParam)
+      // Only update if targeting a different event to avoid loops/redundant renders
+      if (targetEvent && selectedEvent?.id !== targetEvent.id) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedEvent(targetEvent)
+        if (targetEvent.location?.coordinates) {
+          // GeoJSON is [long, lat], Leaflet needs [lat, long]
+          const [lng, lat] = targetEvent.location.coordinates
+          // Apply offset to center map visually (accounting for UI overlay)
+          // Shifting longitude slightly West moves the map center West, 
+          // which moves the actual point East (Right) on the screen.
+          setMapCenter([lat, lng - 0.01])
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, events])
+
   return (
     <section className="relative h-full min-h-0 overflow-hidden">
       <div className="absolute inset-0 z-0">
-        <Map>
+        <Map center={mapCenter}>
           {events
             .filter((event) => {
               if (!event.startsAt) return true // Fallback if no date
@@ -113,7 +142,10 @@ const EventsPage = () => {
       {selectedEvent && (
         <EventPreviewOverlay
           event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
+          onClose={() => {
+            setSelectedEvent(null)
+            setSearchParams({}) // Clear URL params to prevent re-opening
+          }}
         />
       )}
     </section>

@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import EventPreviewOverlay from './EventPreviewOverlay'
 import type { EventSummary } from '../types'
 
@@ -21,7 +22,11 @@ describe('EventPreviewOverlay', () => {
   const mockOnClose = vi.fn()
 
   it('renders event details correctly', () => {
-    render(<EventPreviewOverlay event={mockEvent} onClose={mockOnClose} />)
+    render(
+      <MemoryRouter>
+        <EventPreviewOverlay event={mockEvent} onClose={mockOnClose} />
+      </MemoryRouter>
+    )
 
     expect(screen.getByText('Test Event Title')).toBeDefined()
     expect(screen.getByText('Test Host Name')).toBeDefined()
@@ -30,7 +35,11 @@ describe('EventPreviewOverlay', () => {
   })
 
   it('calls onClose when back button is clicked', () => {
-    render(<EventPreviewOverlay event={mockEvent} onClose={mockOnClose} />)
+    render(
+      <MemoryRouter>
+        <EventPreviewOverlay event={mockEvent} onClose={mockOnClose} />
+      </MemoryRouter>
+    )
 
     fireEvent.click(screen.getByText('Back to Map'))
     expect(mockOnClose).toHaveBeenCalled()
@@ -41,7 +50,11 @@ describe('EventPreviewOverlay', () => {
     window.innerWidth = 1400
     fireEvent(window, new Event('resize'))
 
-    render(<EventPreviewOverlay event={mockEvent} onClose={mockOnClose} />)
+    render(
+      <MemoryRouter>
+        <EventPreviewOverlay event={mockEvent} onClose={mockOnClose} />
+      </MemoryRouter>
+    )
 
     expect(screen.getByText('Tag1')).toBeDefined()
     expect(screen.getByText('Tag2')).toBeDefined()
@@ -57,7 +70,11 @@ describe('EventPreviewOverlay', () => {
     window.innerWidth = 1000
     fireEvent(window, new Event('resize'))
 
-    render(<EventPreviewOverlay event={mockEvent} onClose={mockOnClose} />)
+    render(
+      <MemoryRouter>
+        <EventPreviewOverlay event={mockEvent} onClose={mockOnClose} />
+      </MemoryRouter>
+    )
 
     expect(screen.getByText('Tag1')).toBeDefined()
     expect(screen.queryByText('Tag2')).toBeNull()
@@ -69,7 +86,11 @@ describe('EventPreviewOverlay', () => {
     window.innerWidth = 350
     fireEvent(window, new Event('resize'))
 
-    render(<EventPreviewOverlay event={mockEvent} onClose={mockOnClose} />)
+    render(
+      <MemoryRouter>
+        <EventPreviewOverlay event={mockEvent} onClose={mockOnClose} />
+      </MemoryRouter>
+    )
 
     expect(screen.queryByText('Tag1')).toBeNull()
     expect(screen.getByText('+5')).toBeDefined()

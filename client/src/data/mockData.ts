@@ -1,65 +1,94 @@
-import type { EventSummary } from '../types'
+import type { EventFeedItem } from '../types'
 import BakeSale from './Bake-Sale_800x531.jpg'
 import Trash from './trash.jpeg'
 import Soccer from './wc_final_16x9.jpg'
 import Showcase from './Design Showcase 1.jpg'
 import Holiday from './close-up-shot-of-a-Christmas-tree.jpeg'
 
-export const MOCK_EVENTS: EventSummary[] = [
+export const MOCK_EVENTS: EventFeedItem[] = [
   {
-    id: '1',
+    _id: '1',
     title: 'Bake Sale',
-    host: 'UW Cuisine Club',
-    datetime: 'Nov 20 · 1:00 PM',
-    startsAt: '2025-11-20T13:00:00-08:00',
-    distance: '0.6 miles',
+    description: `Treat yourself to a variety of warming homemade baked goods, from cookies and brownies to cakes and pastries, all made by our very talented club members. Join us for this once-a-year event!\n\nStop by, satisfy your sweet tooth, and support a great cause! Don't miss out-come for the treats, stay for the fun! Proceeds will support XXX charity.`,
+    dateTime: new Date(Date.now() + 172800000).toISOString(), // +2 days
+    distance: 965.606, // ~0.6 miles in meters
     tags: ['Food'],
-    heroImageUrl: BakeSale,
-    rsvpLabel: 'RSVP',
+    images: [BakeSale, BakeSale, BakeSale],
     location: { coordinates: [-122.3035, 47.6553] },
+    participantCount: 132,
+    creatorDetails: {
+      _id: 'h1',
+      name: 'UW Cuisine Club',
+      avatarUrl: BakeSale,
+      bio: 'UW Cuisine Club is a student organization at the University of Washington that is dedicated to the study of cuisines.'
+    }
   },
   {
-    id: '2',
+    _id: '2',
     title: 'Campus Clean Up',
-    host: 'Eco Huskies',
-    datetime: 'Nov 22 · 9:00 AM',
-    startsAt: '2025-11-22T09:00:00-08:00',
-    distance: '1.2 miles',
+    description: 'Join us for a campus clean up event!',
+    dateTime: new Date(Date.now() + 432000000).toISOString(), // +5 days
+    distance: 1931.21, // ~1.2 miles
     tags: ['Service', 'Outdoors'],
-    heroImageUrl: Trash,
+    images: [Trash, Trash, Trash],
     location: { coordinates: [-122.308, 47.656] },
+    participantCount: 45,
+    creatorDetails: {
+      _id: 'h2',
+      name: 'Eco Huskies',
+      avatarUrl: Trash,
+      bio: 'Eco Huskies is dedicated to keeping our campus clean and green.'
+    }
   },
   {
-    id: '3',
+    _id: '3',
     title: 'Intramural Soccer Finals',
-    host: 'UW Athletics',
-    datetime: 'Nov 25 · 7:30 PM',
-    startsAt: '2025-11-25T19:30:00-08:00',
-    distance: 'On Campus',
+    description: 'Cheer on your favorite teams at the intramural soccer finals!',
+    dateTime: new Date(Date.now() - 259200000).toISOString(), // -3 days (Past Event)
+    distance: 0,
     tags: ['Sports'],
-    heroImageUrl: Soccer,
+    images: [Soccer, Soccer, Soccer],
     location: { coordinates: [-122.302, 47.654] },
+    participantCount: 300,
+    creatorDetails: {
+      _id: 'h3',
+      name: 'UW Athletics',
+      avatarUrl: Soccer,
+      bio: 'Official UW Athletics intramural sports.'
+    }
   },
   {
-    id: '4',
+    _id: '4',
     title: 'Winter Showcase',
-    host: 'UW Design Society',
-    datetime: 'Dec 3 · 6:30 PM',
-    startsAt: '2026-12-03T18:30:00-08:00',
-    distance: '0.8 miles',
+    description: 'A showcase of student design work.',
+    dateTime: new Date(Date.now() + 864000000).toISOString(), // +10 days
+    distance: 1287.48, // ~0.8 miles
     tags: ['Arts'],
-    heroImageUrl: Showcase,
+    images: [Showcase, Showcase, Showcase],
     location: { coordinates: [-122.305, 47.657] },
+    participantCount: 89,
+    creatorDetails: {
+      _id: 'h4',
+      name: 'UW Design Society',
+      avatarUrl: Showcase,
+      bio: 'Supporting student designers at UW.'
+    }
   },
   {
-    id: '5',
-    title: 'qwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnm',
-    host: 'UW Lambda Phi Epsilon',
-    datetime: 'Today · 11:59 PM',
-    startsAt: new Date(new Date().setHours(23, 59, 59, 999)).toISOString(),
-    distance: '0.2 miles',
-    tags: ['Social', 'Party', 'Holiday', 'Music', 'Dance', 'Food', 'Outdoors', 'Service', 'Sports', 'Arts'],
-    heroImageUrl: Holiday,
+    _id: '5',
+    title: 'End of Quarter Party',
+    description: 'Celebrate the end of the quarter with us!',
+    dateTime: new Date(Date.now() + 1296000000).toISOString(), // +15 days
+    distance: 321.869, // ~0.2 miles
+    tags: ['Social', 'Party'],
+    images: [Holiday, Holiday, Holiday],
     location: { coordinates: [-122.310, 47.655] },
+    participantCount: 200,
+    creatorDetails: {
+      _id: 'h5',
+      name: 'UW Lambda Phi Epsilon',
+      avatarUrl: Holiday,
+      bio: 'UW Lambda Phi Epsilon fraternity.'
+    }
   },
 ]
