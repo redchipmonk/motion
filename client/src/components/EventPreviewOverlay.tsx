@@ -105,8 +105,6 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Split address if possible or just use location
-  const locationString = '1410 NE Campus Parkway\nSeattle, WA 98195' // Hardcoded for demo/mock as most mocks lack full address
 
   /**
    * Handles RSVP action based on user's current status and event capacity.
@@ -354,22 +352,20 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
                   <p className="text-2xl font-semibold text-motion-plum line-clamp-1 w-full">{event.host}</p>
                 </Tooltip>
 
-                <Tooltip content={locationString} side="bottom" className="w-full" contentClassName="max-w-md">
+                <Tooltip content={event.location?.address || 'Address TBA'} side="bottom" className="w-full" contentClassName="max-w-md">
                   <div
                     className="mt-2 text-xl italic text-motion-plum line-clamp-2 w-full whitespace-pre-line"
                     style={{ overflowWrap: 'anywhere' }}
                   >
-                    {locationString}
+                    {event.location?.address || 'Address TBA'}
                   </div>
                 </Tooltip>
               </div>
             </div>
 
-            {/* Scrollable Description Area */}
             <div className="flex-1 overflow-y-auto pr-4 min-h-0 mt-4">
               <p className="text-lg text-motion-plum leading-relaxed" style={{ overflowWrap: 'anywhere' }}>
-                Treat yourself to a variety of warming homemade baked goods, from cookies and brownies to cakes and pastries, all made by our very talented club members. Join us for this once-a-year event! Treat yourself to a variety of warming homemade baked goods, from cookies and brownies to cakes and pastries, all made by our very talented club members. Join us for this once-a-year event! Treat yourself to a variety of warming homemade baked goods, from cookies and brownies to cakes and pastries, all made by our very talented club members. Join us for this once-a-year event! Treat yourself to a variety of warming homemade baked goods, from cookies and brownies to cakes and pastries, all made by our very talented club members. Join us for this once-a-year event! Treat yourself to a variety of warming homemade baked goods, from cookies and brownies to cakes and pastries, all made by our very talented club members. Join us for this once-a-year event! Treat yourself to a variety of warming homemade baked goods, from cookies and brownies to cakes and pastries, all made by our very talented club members. Join us for this once-a-year event! Treat yourself to a variety of warming homemade baked goods, from cookies and brownies to cakes and pastries, all made by our very talented club members. Join us for this once-a-year event!
-                {/* Hardcoded description for demo matching screenshot text */}
+                {event.description || "No description provided."}
               </p>
             </div>
 

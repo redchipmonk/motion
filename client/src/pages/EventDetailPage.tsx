@@ -5,7 +5,7 @@ import { HiBookmark, HiOutlineBookmark, HiXMark, HiUser, HiMagnifyingGlass } fro
 import { TiLocation } from 'react-icons/ti';
 import { TfiLayoutGrid2Alt } from 'react-icons/tfi';
 import type { EventSummary, EventDetail } from '../types';
-import { MOCK_EVENTS } from '../data/mockData';
+import { getEventById, getEventAttendees, getEventsByHost, getSimilarEvents } from '../data/mockData';
 import EventCard from '../components/EventCard';
 import { motionTheme, cn } from '../theme';
 
@@ -67,11 +67,17 @@ const EventDetailPage = () => {
   const [isAttendeesListOpen, setIsAttendeesListOpen] = useState(false);
   const [attendeeSearch, setAttendeeSearch] = useState('');
 
-  // Load event data using useMemo to avoid setState in useEffect for synchronous mock data
+  // Load event data using useMemo
   const event = useMemo<EventDetail | null>(() => {
-    const found = MOCK_EVENTS.find(e => e._id === eventId);
+    if (!eventId) return null;
+    const found = getEventById(eventId);
 
     if (found) {
+      // Fetch dynamic data
+      const attendees = getEventAttendees(found._id);
+      const otherEvents = getEventsByHost(found.creatorDetails?._id || '');
+      const similarEvents = getSimilarEvents(found._id);
+
       // Transform raw data to EventDetail
       return {
         id: found._id,
@@ -83,17 +89,20 @@ const EventDetailPage = () => {
         tags: found.tags || [],
         heroImageUrl: found.images?.[0] || '/placeholder-event.jpg',
         location: {
-          coordinates: found.location.coordinates
+          coordinates: found.location.coordinates,
+          address: found.location.address
         },
         // Details
         description: found.description || "No description provided.",
         attendeeCount: found.participantCount || 0,
-        attendees: Array(7).fill({
-          id: 'u-mock',
-          name: 'Attendee',
-          avatarUrl: '',
-          status: 'following'
-        }),
+        attendees: attendees
+          .filter(a => a.status === 'going')
+          .map(a => ({
+            id: a._id,
+            name: a.name,
+            avatarUrl: a.avatarUrl,
+            status: a.status as 'following' | 'going' | 'interested'
+          })),
         // Tripling images for pagination demo purposes
         galleryImages: found.images ? [...found.images, ...found.images, ...found.images, ...found.images] : [],
         hostDetails: {
@@ -103,21 +112,32 @@ const EventDetailPage = () => {
           mutualConnections: 0,
           bio: found.creatorDetails?.bio || 'No bio available.'
         },
-        otherEventsByHost: MOCK_EVENTS.slice(0, 3).map(e => ({
+        otherEventsByHost: otherEvents
+          .filter(e => e._id !== found._id) // Exclude current event
+          .slice(0, 3) // Limit to 3 events
+          .map(e => ({
+            id: e._id,
+            title: e.title,
+            host: e.creatorDetails?.name || 'Unknown',
+            datetime: format(new Date(e.dateTime), 'MMM d @ h:mm a'),
+            heroImageUrl: e.images?.[0] || '',
+            location: {
+              coordinates: e.location.coordinates,
+              address: e.location.address
+            },
+            tags: e.tags || []
+          })),
+        similarEvents: similarEvents.map(e => ({
           id: e._id,
           title: e.title,
           host: e.creatorDetails?.name || 'Unknown',
           datetime: format(new Date(e.dateTime), 'MMM d @ h:mm a'),
           heroImageUrl: e.images?.[0] || '',
-          location: { coordinates: e.location.coordinates }
-        })),
-        similarEvents: MOCK_EVENTS.slice(1, 4).map(e => ({
-          id: e._id,
-          title: e.title,
-          host: e.creatorDetails?.name || 'Unknown',
-          datetime: format(new Date(e.dateTime), 'MMM d @ h:mm a'),
-          heroImageUrl: e.images?.[0] || '',
-          location: { coordinates: e.location.coordinates }
+          location: {
+            coordinates: e.location.coordinates,
+            address: e.location.address
+          },
+          tags: e.tags || []
         }))
       };
     }
@@ -324,8 +344,7 @@ const EventDetailPage = () => {
 
               {/* Location */}
               <div className="mt-6 text-xl italic text-black leading-relaxed font-serif">
-                1410 NE Campus Parkway<br />
-                Seattle, WA 98195
+                {event.location?.address || 'Address TBA'}
               </div>
 
               {/* Description */}
@@ -385,7 +404,7 @@ const EventDetailPage = () => {
             }
           />
 
-          <div className="flex justify-between w-full">
+          <div className={cn("flex w-full overflow-x-auto pb-4 gap-6", event.attendees.length >= 7 ? "justify-between" : "")}>
             {event.attendees.slice(0, 7).map((attendee, i) => (
               <AttendeeAvatar key={i} name={attendee.name} status={attendee.status} />
             ))}
@@ -448,7 +467,7 @@ const EventDetailPage = () => {
                   <img src={event.hostDetails.avatarUrl} alt={event.hostDetails.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex flex-col items-center text-center">
-                  <h4 className="text-3xl font-bold text-motion-plum mb-1">{event.hostDetails.name}</h4>
+                  <h4 className="text-[28px] font-bold text-motion-plum mb-1">{event.hostDetails.name}</h4>
                   <p className="font-medium mb-4">{event.hostDetails.mutualConnections} mutual followers</p>
                   <button className="bg-motion-yellow text-motion-purple font-bold py-2 px-16 rounded-full border-2 border-transparent hover:border-motion-purple active:bg-motion-orange active:text-white active:border-motion-orange transition-all shadow-sm">
                     Follow
@@ -466,13 +485,14 @@ const EventDetailPage = () => {
 
             {/* Other Events by Host */}
             <div className="mt-12">
-              <h4 className="text-3xl font-bold text-motion-plum mb-6">Other Events By This Host</h4>
+              <h4 className="text-2xl font-bold text-motion-plum mb-6">Other Events By This Host</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {event.otherEventsByHost.map((evt: EventSummary) => (
                   <div key={evt.id} className="min-w-[280px]">
                     <EventCard
                       event={evt}
                       variant="list"
+                      showHost={false}
                       onSelect={(id) => navigate(`/events/${id}`)}
                     />
                   </div>
@@ -491,6 +511,7 @@ const EventDetailPage = () => {
                 <EventCard
                   event={evt}
                   variant="list"
+                  showTags={true}
                   onSelect={(id) => navigate(`/events/${id}`)}
                 />
               </div>
@@ -590,8 +611,7 @@ const EventDetailPage = () => {
               </div>
 
               <div className="flex flex-col gap-4">
-                {/* Mocking more attendees for the full list view, then filtering */}
-                {[...event.attendees, ...event.attendees, ...event.attendees]
+                {event.attendees
                   .filter(a => a.name.toLowerCase().includes(attendeeSearch.toLowerCase()))
                   .map((attendee, i) => (
                     <div key={i} className="flex items-center gap-6 p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/10 hover:bg-white/20 transition-colors cursor-pointer" onClick={(e) => e.stopPropagation()}>

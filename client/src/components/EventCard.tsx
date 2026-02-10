@@ -23,6 +23,12 @@ type EventCardProps = {
   isActive?: boolean;
   /** Callback fired when card is clicked or activated via keyboard */
   onSelect?: (eventId: string) => void;
+  /** Whether to show the host name (default: true) */
+  showHost?: boolean;
+  /** Whether to show tags (default: false for list, true for others) */
+  showTags?: boolean;
+  /** Display mode for hosted events (minimal: title + status only) */
+  variantMode?: "default" | "hosted";
 };
 
 /**
@@ -43,9 +49,9 @@ const VARIANT_STYLES: Record<EventCardVariant, string> = {
  * - Supports keyboard activation via Enter/Space
  * - aria-pressed indicates active state
  */
-const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: EventCardProps) => {
+const EventCard = ({ event, variant = 'list', isActive = false, onSelect, showHost = true, showTags, variantMode = 'default' }: EventCardProps) => {
   // Destructure event data for easier access
-  const { id, title, host, datetime, distance, tags = [], heroImageUrl } = event;
+  const { id, title, host, datetime, distance, tags = [], heroImageUrl, status } = event;
 
   /** Triggers the onSelect callback with this event's ID */
   const handleActivate = () => onSelect?.(id);
@@ -93,8 +99,8 @@ const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: Even
             variant === 'preview' ? "h-24" : "h-32"
           )}
         />
-        {/* Date Badge - shown on list and map variants, positioned top-right */}
-        {variant !== 'preview' && (
+        {/* Date Badge - shown on list and map variants, positioned top-right (hidden in hosted mode) */}
+        {variant !== 'preview' && variantMode !== 'hosted' && (
           <span
             data-testid="event-card-datetime"
             className="absolute right-4 top-3 rounded-full bg-motion-orange px-3 py-1 text-xs font-semibold text-white shadow-[0_3px_8px_rgba(0,0,0,0.18)]"
@@ -112,17 +118,33 @@ const EventCard = ({ event, variant = 'list', isActive = false, onSelect }: Even
             {title} hosted by {host} <span className="opacity-80">@ {datetime.split('·')[1]?.trim() || datetime}</span>
           </p>
         </div>
+      ) : variantMode === 'hosted' ? (
+        // Hosted mode: minimal display with title and status only
+        <div className="px-4 pb-4 pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="min-w-0 truncate text-base font-semibold text-motion-plum">
+              {title}
+            </p>
+            {status && (
+              <span className="shrink-0 text-sm font-medium text-motion-plum/70 capitalize">
+                {status}
+              </span>
+            )}
+          </div>
+        </div>
       ) : (
         // List/Map variants: full content with title, distance, and optional tags
         <div className="space-y-2 px-4 pb-4 pt-3">
           {/* Title Row - title truncates, distance stays fixed width */}
           <div className="flex items-center justify-between gap-3">
-            <p className="min-w-0 truncate text-base font-semibold text-motion-plum">{`${title} hosted by ${host}`}</p>
+            <p className="min-w-0 truncate text-base font-semibold text-motion-plum">
+              {title}{showHost && ` hosted by ${host}`}
+            </p>
             {distance && <p className="shrink-0 text-sm text-motion-plum/70">{distance}</p>}
           </div>
 
-          {/* Tags - only shown in 'map' variant (list variant omits for cleaner look) */}
-          {variant !== 'list' && tags.length > 0 && (
+          {/* Tags - default behavior depends on variant, can be overridden */}
+          {(showTags || (variant !== 'list' && showTags !== false)) && tags.length > 0 && (
             <ul className="flex flex-wrap gap-2">
               {tags.map((tag) => (
                 <li key={tag} className="rounded-full bg-motion-lilac px-3 py-1 text-xs font-semibold text-motion-purple">

@@ -31,8 +31,10 @@ const transformEvent = (event: EventFeedItem): EventSummary => ({
   tags: event.tags || [],
   heroImageUrl: event.images?.[0] || '/placeholder-event.jpg',
   location: {
-    coordinates: event.location.coordinates
-  }
+    coordinates: event.location.coordinates,
+    address: event.location.address
+  },
+  description: event.description
 });
 
 const EventsPage = () => {

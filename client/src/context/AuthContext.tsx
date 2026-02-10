@@ -17,11 +17,24 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(() => {
+    const stored = localStorage.getItem('token');
+    // Auto-login with mock token for development
+    if (!stored) {
+      return 'mock-token-dev';
+    }
+    return stored;
+  });
+
   const [user, setUser] = useState<User | null>(() => {
     const storedUser = localStorage.getItem('user');
     try {
-      return storedUser ? JSON.parse(storedUser) : null;
+      if (storedUser) {
+        return JSON.parse(storedUser);
+      }
+      // Auto-login with mock user (Alice) for development
+      const mockUser = { _id: 'u1', name: 'Alice Chen', email: 'alice@uw.edu' };
+      return mockUser;
     } catch {
       return null;
     }

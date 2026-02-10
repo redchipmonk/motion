@@ -90,9 +90,14 @@ const CreateEventPage = () => {
     if (isEditing && id) {
       const fetchEvent = async () => {
         try {
-          const res = await api.get(`/events/${id}`)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const event = (res as any).data
+          // Use mock data for now - in production, use API
+          const { getEventById } = await import('../data/mockData')
+          const event = getEventById(id)
+
+          if (!event) {
+            setError("Event not found.")
+            return
+          }
 
           // Parse Date
           const dateObj = new Date(event.dateTime)
@@ -100,9 +105,10 @@ const CreateEventPage = () => {
           const timeStr = dateObj.toTimeString().slice(0, 5) // HH:MM
 
           let endTimeStr = ''
-          if (event.endDateTime) {
-            endTimeStr = new Date(event.endDateTime).toTimeString().slice(0, 5)
-          }
+          // Since mock data doesn't have endDateTime, skip this
+          // if (event.endDateTime) {
+          //   endTimeStr = new Date(event.endDateTime).toTimeString().slice(0, 5)
+          // }
 
           setTags(event.tags || [])
 
@@ -113,13 +119,13 @@ const CreateEventPage = () => {
             startTime: timeStr,
             endTime: endTimeStr,
             location: {
-              address: event.location.address,
-              coordinates: [event.location.longitude, event.location.latitude]
+              address: event.location.address || '',
+              coordinates: event.location.coordinates
             },
-            status: event.status,
-            visibility: event.visibility,
-            hideLocation: event.hideLocation,
-            capacity: event.capacity,
+            status: event.status || 'published',
+            visibility: 'public', // Default since mock data doesn't have this
+            hideLocation: false, // Default since mock data doesn't have this
+            capacity: undefined, // Mock data doesn't have capacity
             tags: event.tags || [],
           })
         } catch (err) {
@@ -204,13 +210,24 @@ const CreateEventPage = () => {
   return (
     <div className="mx-auto w-full px-12 py-12 pb-20 overflow-y-auto h-full">
       <div className="mx-auto max-w-8xl">
-        <h1 className="mb-6 text-5xl font-bold text-motion-plum">
-          {isEditing ? (
-            <>Edit <span className="text-motion-purple">"{watchedTitle}"</span> for <span className="text-motion-purple">"{user?.name || 'User'}"</span></>
-          ) : (
-            <>Create Event for <span className="text-motion-purple">{user?.name || 'User'}</span></>
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <h1 className="text-5xl font-bold text-motion-plum">
+            {isEditing ? (
+              <>Edit <span className="text-motion-purple">{watchedTitle || 'Event'}</span> for <span className="text-motion-purple">{user?.name || 'User'}</span></>
+            ) : (
+              <>Create Event for <span className="text-motion-purple">{user?.name || 'User'}</span></>
+            )}
+          </h1>
+          {isEditing && id && (
+            <button
+              type="button"
+              onClick={() => navigate(`/events/${id}`)}
+              className="shrink-0 rounded-2xl border-2 border-transparent bg-motion-lilac px-6 py-2 text-lg font-bold text-motion-purple transition-colors duration-200 hover:border-motion-purple active:bg-motion-purple active:text-white"
+            >
+              View Event
+            </button>
           )}
-        </h1>
+        </div>
 
         <form onSubmit={handleSubmit(onSubmit)}>
 
