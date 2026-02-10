@@ -104,7 +104,7 @@ const CreateEventPage = () => {
           const dateStr = dateObj.toISOString().split('T')[0]
           const timeStr = dateObj.toTimeString().slice(0, 5) // HH:MM
 
-          let endTimeStr = ''
+          const endTimeStr = ''
           // Since mock data doesn't have endDateTime, skip this
           // if (event.endDateTime) {
           //   endTimeStr = new Date(event.endDateTime).toTimeString().slice(0, 5)

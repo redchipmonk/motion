@@ -19,8 +19,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(() => {
     const stored = localStorage.getItem('token');
-    // Auto-login with mock token for development
-    if (!stored) {
+    // Auto-login with mock token for development (but not in tests)
+    if (!stored && import.meta.env.MODE === 'development' && !import.meta.env.VITEST) {
       return 'mock-token-dev';
     }
     return stored;
@@ -32,9 +32,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (storedUser) {
         return JSON.parse(storedUser);
       }
-      // Auto-login with mock user (Alice) for development
-      const mockUser = { _id: 'u1', name: 'Alice Chen', email: 'alice@uw.edu' };
-      return mockUser;
+      // Auto-login with mock user (Alice) for development (but not in tests)
+      if (import.meta.env.MODE === 'development' && !import.meta.env.VITEST) {
+        const mockUser = { _id: 'u1', name: 'Alice Chen', email: 'alice@uw.edu' };
+        return mockUser;
+      }
+      return null;
     } catch {
       return null;
     }

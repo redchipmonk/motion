@@ -90,7 +90,6 @@ const EventsPage = () => {
       const targetEvent = events.find(e => e.id === eventIdParam)
       // Only update if targeting a different event to avoid loops/redundant renders
       if (targetEvent && selectedEvent?.id !== targetEvent.id) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedEvent(targetEvent)
         if (targetEvent.location?.coordinates) {
           // GeoJSON is [long, lat], Leaflet needs [lat, long]

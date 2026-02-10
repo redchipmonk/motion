@@ -51,27 +51,27 @@ const ProfilePage = () => {
   useEffect(() => {
     if (!targetUserId) return;
 
-    // Simulate fetch
-    setLoading(true);
+    const loadProfile = async () => {
+      // Fetch all data
+      const foundUser = getUserById(targetUserId);
+      let foundConnections: User[] = [];
 
-    // 1. Get User
-    const foundUser = getUserById(targetUserId);
-    setTargetUser(foundUser || null);
+      if (isOwnProfile) {
+        foundConnections = MOCK_USERS.filter(u => u._id !== targetUserId).slice(0, 8);
+      } else if (authUser) {
+        foundConnections = getMutualFollowers(authUser._id, targetUserId);
+      }
 
-    // 2. Get Connections / Mutuals
-    if (isOwnProfile) {
-      // "My Connections" -> In mock, just show some random users as "Connections"
-      setConnections(MOCK_USERS.filter(u => u._id !== targetUserId).slice(0, 8));
-    } else if (authUser) {
-      // "Mutual Followers"
-      setConnections(getMutualFollowers(authUser._id, targetUserId));
-    }
+      const userEvents = getUserEvents(targetUserId);
 
-    // 3. Get Events
-    const userEvents = getUserEvents(targetUserId);
-    setEvents(userEvents);
+      // Update state
+      setTargetUser(foundUser || null);
+      setConnections(foundConnections);
+      setEvents(userEvents);
+      setLoading(false);
+    };
 
-    setLoading(false);
+    loadProfile();
   }, [targetUserId, authUser, isOwnProfile]);
 
   if (loading) {
