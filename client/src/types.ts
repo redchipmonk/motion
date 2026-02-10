@@ -13,13 +13,16 @@ export type EventSummary = {
   host: string;
   datetime: string;
   startsAt?: string;
+  description?: string;
   distance?: string;
   tags?: string[];
   heroImageUrl: string;
   rsvpLabel?: string;
   footerNode?: ReactNode;
+  status?: 'published' | 'draft'; // Event publication status
   location?: {
     coordinates: [number, number]; // [longitude, latitude] per GeoJSON
+    address?: string;
   };
 };
 
@@ -35,8 +38,10 @@ export interface EventFeedItem {
   distance?: number; // in meters
   tags?: string[];
   images?: string[];
+  status?: 'published' | 'draft'; // Event publication status
   location: {
     coordinates: [number, number]; // [longitude, latitude]
+    address?: string; // Human readable address
   };
   creatorDetails?: {
     _id: string; // Added ID for host linking
@@ -66,4 +71,20 @@ export interface EventDetail extends EventSummary {
   };
   otherEventsByHost: EventSummary[];
   similarEvents: EventSummary[];
+}
+
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+  handle: string;
+  avatarUrl?: string;
+  bio?: string;
+}
+
+export interface RSVP {
+  _id: string;
+  eventId: string;
+  userId: string;
+  status: 'going' | 'interested' | 'waitlist';
 }
