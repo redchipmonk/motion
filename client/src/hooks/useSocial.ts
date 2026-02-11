@@ -27,10 +27,10 @@ export const useSocial = (targetUser: User | null | undefined) => {
       const freshAuth = await api.get<User>(`/users/${authUser._id}`);
 
       if (targetUser.userType === 'organization') {
-        const followingIds = freshAuth.following?.map((u: any) => typeof u === 'string' ? u : u._id) || [];
+        const followingIds = freshAuth.following?.map((u: string | User) => typeof u === 'string' ? u : u._id) || [];
         setIsFollowing(followingIds.includes(targetUser._id));
       } else {
-        const connectionIds = freshAuth.connections?.map((u: any) => typeof u === 'string' ? u : u._id) || [];
+        const connectionIds = freshAuth.connections?.map((u: string | User) => typeof u === 'string' ? u : u._id) || [];
         if (connectionIds.includes(targetUser._id)) {
           setConnectionStatus('accepted');
         } else {

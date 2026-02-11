@@ -76,7 +76,7 @@ export class UserService {
 
     // Check if already connected
     const requester = await this.userModel.findById(requesterId);
-    if (requester?.connections.includes(recipientId as any)) {
+    if (requester?.connections.some(c => c.toString() === recipientId)) {
       throw new Error("Already connected");
     }
 

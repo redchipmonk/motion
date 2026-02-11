@@ -7,7 +7,7 @@ import { TfiLayoutGrid2Alt } from 'react-icons/tfi';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocial } from '../hooks/useSocial';
-import type { EventSummary, EventDetail, User } from '../types';
+import type { EventSummary, EventDetail, User, EventFeedItem } from '../types';
 import { getEventById, getEventAttendees, getEventsByHost, getSimilarEvents } from '../data/mockData';
 import EventCard from '../components/EventCard';
 import { motionTheme, cn } from '../theme';
@@ -100,11 +100,13 @@ const EventDetailPage = () => {
       setLoading(true);
       try {
         // 1. Fetch Event Details
-        const eventData = await api.get<any>(`/events/${eventId}`);
+        const eventData = await api.get<EventFeedItem>(`/events/${eventId}`);
 
         if (!eventData) throw new Error("Event not found");
 
-        let creator = eventData.creatorDetails || eventData.hostDetails || (typeof eventData.createdBy === 'object' ? eventData.createdBy : {}) || {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rawEvent = eventData as any;
+        let creator = rawEvent.creatorDetails || rawEvent.hostDetails || (typeof rawEvent.createdBy === 'object' ? rawEvent.createdBy : {}) || {};
 
         // Fallback: If creator has no name and createdBy is an ID, fetch the user
         if (!creator.name && typeof eventData.createdBy === 'string') {
@@ -117,7 +119,7 @@ const EventDetailPage = () => {
         }
 
         // 2. Fetch Other Events by Host (optional, can be parallel)
-        const otherEventsData = await api.get<any[]>(`/events?createdBy=${creator._id}&limit=3`);
+        const otherEventsData = await api.get<EventFeedItem[]>(`/events?createdBy=${creator._id}&limit=3`);
 
         // Transform to EventDetail
         const transformed: EventDetail = {
@@ -146,9 +148,9 @@ const EventDetailPage = () => {
             userType: creator.userType
           },
           otherEventsByHost: otherEventsData
-            .filter((e: any) => e._id !== eventData._id)
+            .filter((e: EventFeedItem) => e._id !== eventData._id)
             .slice(0, 3)
-            .map((e: any) => ({
+            .map((e: EventFeedItem) => ({
               id: e._id,
               title: e.title,
               host: creator.name || 'Unknown',

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiUser, HiXMark, HiMagnifyingGlass } from 'react-icons/hi2';
-import type { User } from '../types';
 
 interface UserListOverlayProps {
   isOpen: boolean;

@@ -114,6 +114,7 @@ usersRouter.delete("/:id", protectedRoute, asyncHandler(async (req: AuthRequest,
 }));
 
 usersRouter.post("/request-connection", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const { recipientId } = req.body;
   if (!isString(recipientId)) {
     return res.status(400).json({ error: "Missing recipientId" });
@@ -124,6 +125,7 @@ usersRouter.post("/request-connection", protectedRoute, asyncHandler(async (req:
 }));
 
 usersRouter.post("/accept-connection", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const { requesterId } = req.body;
   if (!isString(requesterId)) {
     return res.status(400).json({ error: "Missing requesterId" });
@@ -134,6 +136,7 @@ usersRouter.post("/accept-connection", protectedRoute, asyncHandler(async (req: 
 }));
 
 usersRouter.post("/follow-rso", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const { rsoId } = req.body;
   if (!isString(rsoId)) {
     return res.status(400).json({ error: "Missing rsoId" });
@@ -144,6 +147,7 @@ usersRouter.post("/follow-rso", protectedRoute, asyncHandler(async (req: AuthReq
 }));
 
 usersRouter.post("/unfollow-rso", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const { rsoId } = req.body;
   if (!isString(rsoId)) {
     return res.status(400).json({ error: "Missing rsoId" });

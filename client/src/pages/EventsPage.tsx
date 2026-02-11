@@ -17,7 +17,7 @@ import Map from '../components/Map/Map'
 import EventMarker from '../components/Map/EventMarker'
 import EventPreviewOverlay from '../components/EventPreviewOverlay'
 import { api } from '../lib/api'
-import type { EventSummary, EventFeedItem } from '../types'
+import type { EventSummary, EventFeedItem, User } from '../types'
 import { useAuth } from '../context/AuthContext'
 import { format } from 'date-fns';
 
@@ -62,10 +62,10 @@ const EventsPage = () => {
       try {
         // Fetch User Social Graph
         // We need full user object to get following/connections arrays
-        const userProfile = await api.get<any>(`/users/${user._id}`);
+        const userProfile = await api.get<User>(`/users/${user._id}`);
         // Extract IDs regardless of whether they are populated objects or strings
-        const fIds = (userProfile.following || []).map((u: any) => typeof u === 'object' ? u._id : u);
-        const cIds = (userProfile.connections || []).map((u: any) => typeof u === 'object' ? u._id : u);
+        const fIds = (userProfile.following || []).map((u: string | User) => typeof u === 'object' ? u._id : u);
+        const cIds = (userProfile.connections || []).map((u: string | User) => typeof u === 'object' ? u._id : u);
         setFollowingIds(fIds);
         setConnectionIds(cIds);
 

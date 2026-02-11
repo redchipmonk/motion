@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
@@ -106,13 +106,13 @@ const ProfilePage = () => {
             // Ideally backend returns this, but for now we iterate 'followers' or check 'following' on authUser
             // Let's check authUser's following list (re-fetch auth user or rely on context if updated)
             const freshAuthUser = await api.get<User>(`/users/${authUser._id}`);
-            const followingIds = freshAuthUser.following?.map((u: any) => typeof u === 'string' ? u : u._id) || [];
+            const followingIds = freshAuthUser.following?.map((u: string | User) => typeof u === 'string' ? u : u._id) || [];
             setIsFollowing(followingIds.includes(targetUserId));
           } else {
             // Check connection status
             // Simple check: is target in my connections?
             const freshAuthUser = await api.get<User>(`/users/${authUser._id}`);
-            const myConnectionIds = freshAuthUser.connections?.map((u: any) => typeof u === 'string' ? u : u._id) || [];
+            const myConnectionIds = freshAuthUser.connections?.map((u: string | User) => typeof u === 'string' ? u : u._id) || [];
 
             if (myConnectionIds.includes(targetUserId)) {
               setConnectionStatus('accepted');
@@ -504,8 +504,9 @@ const ProfilePage = () => {
 
 const HighlightOverlay = ({ isOpen, onClose, authUser, events }: { isOpen: boolean; onClose: () => void; authUser: User | null; events: EventFeedItem[] }) => {
   const [activeTab, setActiveTab] = useState<'hosted' | 'rsvped'>('rsvped');
-  const [hostedEvents, setHostedEvents] = useState<EventFeedItem[]>([]);
-  const [rsvpedEvents, setRsvpedEvents] = useState<EventFeedItem[]>([]);
+  // const [hostedEvents, setHostedEvents] = useState<EventFeedItem[]>([]); // Removed: Use events prop directly
+  // const [hostedEvents, setHostedEvents] = useState<EventFeedItem[]>([]); // Removed: Use events prop directly
+  // const [rsvpedEvents, setRsvpedEvents] = useState<EventFeedItem[]>([]); // Removed: Use useMemo
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Tab Animation State
@@ -515,7 +516,7 @@ const HighlightOverlay = ({ isOpen, onClose, authUser, events }: { isOpen: boole
   const [sliderStyle, setSliderStyle] = useState<{ width: number; left: number }>({ width: 0, left: 0 });
 
   // Sync Slider Logic - Updated to match EventFeedList (offsetLeft/offsetWidth)
-  const syncSlider = () => {
+  const syncSlider = useCallback(() => {
     const target = activeTab === 'hosted' ? hostedRef.current : rsvpedRef.current;
 
     if (target) {
@@ -524,7 +525,7 @@ const HighlightOverlay = ({ isOpen, onClose, authUser, events }: { isOpen: boole
         left: target.offsetLeft,
       });
     }
-  };
+  }, [activeTab]);
 
   useEffect(() => {
     syncSlider();
@@ -535,20 +536,17 @@ const HighlightOverlay = ({ isOpen, onClose, authUser, events }: { isOpen: boole
       clearTimeout(timer);
       window.removeEventListener('resize', syncSlider);
     };
-  }, [activeTab, isOpen]);
+  }, [syncSlider, isOpen]);
 
-  useEffect(() => {
-    if (isOpen && authUser) {
-      setHostedEvents(events);
+  const rsvpedEvents = useMemo(() => {
+    if (!isOpen || !authUser) return [];
 
-      // Use shared MOCK_EVENTS and MOCK_RSVPS logic
-      const userRsvps = MOCK_RSVPS.filter(r => r.userId === authUser._id && ['going', 'interested', 'waitlist'].includes(r.status));
-      const rsvpedIds = new Set(userRsvps.map(r => r.eventId));
+    // Use shared MOCK_EVENTS and MOCK_RSVPS logic
+    const userRsvps = MOCK_RSVPS.filter(r => r.userId === authUser._id && ['going', 'interested', 'waitlist'].includes(r.status));
+    const rsvpedIds = new Set(userRsvps.map(r => r.eventId));
 
-      const myRsvpedEvents = MOCK_EVENTS.filter(e => rsvpedIds.has(e._id));
-      setRsvpedEvents(myRsvpedEvents);
-    }
-  }, [isOpen, authUser, events]);
+    return MOCK_EVENTS.filter(e => rsvpedIds.has(e._id));
+  }, [isOpen, authUser]);
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev =>
@@ -557,7 +555,7 @@ const HighlightOverlay = ({ isOpen, onClose, authUser, events }: { isOpen: boole
   };
 
   // Sort by Newest -> Oldest
-  const currentList = (activeTab === 'hosted' ? hostedEvents : rsvpedEvents)
+  const currentList = (activeTab === 'hosted' ? events : rsvpedEvents)
     .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
 
   return (
