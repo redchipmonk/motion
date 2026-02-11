@@ -556,15 +556,15 @@ export const mockApi = {
   },
 
   /* eslint-disable @typescript-eslint/no-unused-vars */
-  post<T>(endpoint: string, body?: unknown): Promise<T> {
+  post<T>(_endpoint: string, _body?: unknown): Promise<T> {
     return Promise.resolve({} as T);
   },
 
-  patch<T>(endpoint: string, body?: unknown): Promise<T> {
+  patch<T>(_endpoint: string, _body?: unknown): Promise<T> {
     return Promise.resolve({} as T);
   },
 
-  delete<T>(endpoint: string): Promise<T> {
+  delete<T>(_endpoint: string): Promise<T> {
     return Promise.resolve({} as T);
   },
   /* eslint-enable @typescript-eslint/no-unused-vars */

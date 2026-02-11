@@ -54,7 +54,7 @@ describe('transformEventToSummary', () => {
 
   it('preserves location coordinates and address', () => {
     const result = transformEventToSummary(makeEvent());
-    expect(result.location.coordinates).toEqual([-122.3, 47.6]);
-    expect(result.location.address).toBe('123 Main St');
+    expect(result.location!.coordinates).toEqual([-122.3, 47.6]);
+    expect(result.location!.address).toBe('123 Main St');
   });
 });
