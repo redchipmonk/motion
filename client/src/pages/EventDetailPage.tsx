@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { HiBookmark, HiOutlineBookmark, HiXMark } from 'react-icons/hi2';
 import { TiLocation } from 'react-icons/ti';
@@ -17,9 +17,18 @@ import LoadingScreen from '../components/LoadingScreen';
 
 type RSVPStatus = 'going' | 'interested' | 'waitlist' | null;
 
+type AttendeeResponse = {
+  _id: string;
+  id?: string;
+  name: string;
+  avatarUrl?: string;
+  status: string;
+};
+
 const EventDetailPage = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [now] = useState(() => Date.now());
 
@@ -79,6 +88,36 @@ const EventDetailPage = () => {
 
         const otherEventsData = await apiClient.get<EventFeedItem[]>(`/events?createdBy=${creator._id}&limit=3`);
 
+        // Fetch Attendees
+        let attendeesData: AttendeeResponse[] = [];
+        try {
+          attendeesData = await apiClient.get<AttendeeResponse[]>(`/events/${eventId}/attendees`);
+        } catch (e) {
+          console.error("Failed to fetch attendees", e);
+        }
+
+        // Sort Attendees: Current User -> Going -> Interested -> A-Z
+        const sortedAttendees = attendeesData.map(a => ({
+          id: a.id || a._id,
+          name: a.name,
+          avatarUrl: a.avatarUrl,
+          status: a.status as 'going' | 'interested' | 'waitlist' | 'following'
+        })).sort((a, b) => {
+          // 1. Current User
+          if (user && a.id === user._id) return -1;
+          if (user && b.id === user._id) return 1;
+
+          // 2. Status Priority
+          const statusOrder: Record<string, number> = { 'going': 1, 'waitlist': 2, 'interested': 3 };
+          const sA = statusOrder[a.status] || 99;
+          const sB = statusOrder[b.status] || 99;
+
+          if (sA !== sB) return sA - sB;
+
+          // 3. Alphabetical
+          return a.name.localeCompare(b.name);
+        });
+
         const transformed: EventDetail = {
           id: eventData._id,
           title: eventData.title,
@@ -93,8 +132,8 @@ const EventDetailPage = () => {
             address: eventData.location?.address
           },
           description: eventData.description || 'No description provided.',
-          attendeeCount: eventData.participantCount || 0,
-          attendees: [],
+          attendeeCount: attendeesData.length, // Use actual length from fetched list
+          attendees: sortedAttendees,
           galleryImages: eventData.images || [],
           hostDetails: {
             id: creator._id || '',
@@ -132,7 +171,7 @@ const EventDetailPage = () => {
     };
 
     fetchEventData();
-  }, [eventId]);
+  }, [eventId, user]);
 
   const handleRsvpAction = (action: 'going' | 'interested' | 'waitlist' | 'cancel' | 'remove') => {
     switch (action) {
@@ -382,16 +421,16 @@ const EventDetailPage = () => {
                 </div>
               </div>
               <div className="absolute top-full left-0 mt-3 flex items-center gap-4">
-                {user && event.hostDetails.id === user._id ? (
-                  /* Host View: Edit Event */
+                {user && event.hostDetails.id === user._id && searchParams.get('preview') === 'true' ? (
+                  /* Host Preview Mode: Show Back to Edit */
                   <button
                     onClick={() => navigate(`/events/${event.id}/edit`)}
                     className="inline-flex items-center gap-1 text-sm font-medium text-black bg-transparent border-none shadow-none hover:underline transition-opacity"
                   >
-                    Edit Event <TiLocation className="text-motion-purple text-xl" />
+                    Back to Edit
                   </button>
                 ) : (
-                  /* Guest View: Switch to Map View */
+                  /* Standard View (Guest or Host): Switch to Map View */
                   event.startsAt && new Date(event.startsAt).getTime() > now && (
                     <button
                       onClick={() => navigate(`/events?eventId=${event.id}`)}

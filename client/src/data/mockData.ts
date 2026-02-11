@@ -133,7 +133,7 @@ export const MOCK_RSVPS: RSVP[] = [
   { _id: 'r83', eventId: '12', userId: 'u8', status: 'going' },
   // RSVP for Past Concert (Event 15) for Alice (u1)
   { _id: 'r84', eventId: '15', userId: 'u1', status: 'going' },
-];
+].filter(rsvp => !['h2', 'h3', 'h5'].includes(rsvp.userId)) as RSVP[]; // Remove Organization RSVPs dynamically
 
 // Helper function to create a date with specific time
 const createEventDate = (daysOffset: number, hour: number, minute: number = 0): string => {
@@ -143,13 +143,54 @@ const createEventDate = (daysOffset: number, hour: number, minute: number = 0): 
   return date.toISOString();
 };
 
+export const MOCK_USER_LOCATION = {
+  lat: 47.6538,
+  long: -122.3078
+};
+
+const getDistanceInMeters = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371e3; // metres
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+};
+
 export const MOCK_EVENTS: EventFeedItem[] = [
+  {
+    _id: 'today-1',
+    title: 'Midnight Coding Session',
+    description: 'Late night coding session to wrap up the sprint! Bring your own coffee.',
+    dateTime: createEventDate(0, 23, 59), // Today at 11:59 PM
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.6553, -122.3035),
+    tags: ['Academic', 'Social'],
+    images: [Showcase], // Reusing existing image
+    status: 'published',
+    location: {
+      coordinates: [-122.3035, 47.6553],
+      address: 'Odegaard Library, Seattle, WA 98195'
+    },
+    participantCount: 5,
+    creatorDetails: {
+      _id: 'u1',
+      name: 'Alice Chen',
+      avatarUrl: Holiday,
+      bio: 'CS major'
+    }
+  },
   {
     _id: '1',
     title: 'Bake Sale',
     description: `Treat yourself to a variety of warming homemade baked goods, from cookies and brownies to cakes and pastries, all made by our very talented club members. Join us for this once-a-year event!\n\nStop by, satisfy your sweet tooth, and support a great cause! Don't miss out-come for the treats, stay for the fun! Proceeds will support XXX charity.`,
     dateTime: createEventDate(2, 13), // +2 days at 1:00 PM
-    distance: 965.606, // ~0.6 miles in meters
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.6553, -122.3035),
     tags: ['Food'],
     images: [BakeSale, BakeSale, BakeSale],
     status: 'published',
@@ -170,7 +211,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Campus Clean Up',
     description: 'Join us for a campus clean up event! Help us keep UW beautiful and green. We provide all supplies - just bring your energy and enthusiasm!',
     dateTime: createEventDate(5, 10), // +5 days at 10:00 AM
-    distance: 1931.21, // ~1.2 miles
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.656, -122.308),
     tags: ['Service', 'Outdoors'],
     images: [Trash, Trash, Trash],
     status: 'published',
@@ -191,7 +232,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Intramural Soccer Finals',
     description: 'Cheer on your favorite teams at the intramural soccer finals! The championship match of the season - don\'t miss the action!',
     dateTime: createEventDate(-3, 15), // -3 days at 3:00 PM (Past Event)
-    distance: 0,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.654, -122.302),
     tags: ['Sports'],
     images: [Soccer, Soccer, Soccer],
     status: 'published',
@@ -212,7 +253,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Winter Showcase',
     description: 'A showcase of student design work. Come see amazing projects from UW\'s most talented designers and artists. Reception to follow!',
     dateTime: createEventDate(10, 18), // +10 days at 6:00 PM
-    distance: 1287.48, // ~0.8 miles
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.657, -122.305),
     tags: ['Arts'],
     images: [Showcase, Showcase, Showcase],
     status: 'published',
@@ -233,7 +274,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'End of Quarter Party',
     description: 'Celebrate the end of the quarter with us! Music, food, and good vibes. All are welcome!',
     dateTime: createEventDate(15, 20), // +15 days at 8:00 PM
-    distance: 321.869, // ~0.2 miles
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.655, -122.310),
     tags: ['Social', 'Party'],
     images: [Holiday, Holiday, Holiday],
     status: 'published',
@@ -254,7 +295,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Study Group: CSE 143',
     description: 'Weekly study group for CSE 143. We\'ll review lecture material, work through practice problems, and help each other prepare for the midterm.',
     dateTime: createEventDate(1, 14), // +1 day at 2:00 PM
-    distance: 450.5,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.653, -122.307),
     tags: ['Academic', 'Study'],
     images: [BakeSale],
     status: 'published',
@@ -275,7 +316,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Coffee & Code Meetup',
     description: 'Casual meetup for developers to chat about tech, projects, and opportunities. Bring your laptop and ideas!',
     dateTime: createEventDate(3, 16), // +3 days at 4:00 PM
-    distance: 1100.0,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.656, -122.312),
     tags: ['Social', 'Tech'],
     images: [Showcase],
     status: 'published',
@@ -296,7 +337,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Open Mic Night',
     description: 'Showcase your talent! Poetry, music, comedy - all performers welcome. Sign up starts at 7pm, show starts at 8pm.',
     dateTime: createEventDate(7, 20), // +7 days at 8:00 PM
-    distance: 780.2,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.654, -122.311),
     tags: ['Arts', 'Music', 'Social'],
     images: [Holiday],
     status: 'published',
@@ -317,7 +358,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Basketball Pickup Games',
     description: 'Weekly pickup basketball. All skill levels welcome! Just bring your game face and good sportsmanship.',
     dateTime: createEventDate(4, 17), // +4 days at 5:00 PM
-    distance: 550.8,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.654, -122.302),
     tags: ['Sports', 'Outdoors'],
     images: [Soccer],
     status: 'published',
@@ -338,7 +379,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Resume Workshop',
     description: 'Get your resume ready for career fair! Career counselors will review resumes and provide personalized feedback.',
     dateTime: createEventDate(6, 13), // +6 days at 1:00 PM
-    distance: 920.4,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.655, -122.306),
     tags: ['Career', 'Workshop'],
     images: [Showcase],
     status: 'published',
@@ -359,7 +400,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Yoga in the Park',
     description: 'Free outdoor yoga session. Bring your own mat and enjoy an hour of relaxation and stretching in nature.',
     dateTime: createEventDate(8, 9), // +8 days at 9:00 AM
-    distance: 1500.0,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.658, -122.304),
     tags: ['Wellness', 'Outdoors'],
     images: [Trash],
     status: 'published',
@@ -380,7 +421,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Game Night: Board Games & Pizza',
     description: 'Unwind with board games and pizza! We have classics and new games. BYOB (Bring Your Own Beverage).',
     dateTime: createEventDate(12, 19), // +12 days at 7:00 PM
-    distance: 400.0,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.655, -122.309),
     tags: ['Social', 'Gaming', 'Food'],
     images: [BakeSale],
     status: 'published',
@@ -401,7 +442,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Spring Hiking Trip',
     description: 'Planning a group hike to Rattlesnake Ledge! Beautiful views and moderate difficulty. Still working out the final details.',
     dateTime: createEventDate(20, 8), // +20 days at 8:00 AM
-    distance: 1200.0,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.656, -122.308),
     tags: ['Outdoors', 'Social'],
     images: [Trash],
     status: 'draft',
@@ -422,7 +463,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Past Hiking Trip',
     description: 'A great hike we did last month!',
     dateTime: createEventDate(-30, 9), // -30 days
-    distance: 1200.0,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.656, -122.308),
     tags: ['Outdoors'],
     images: [Trash],
     status: 'published', // Published past event
@@ -443,7 +484,7 @@ export const MOCK_EVENTS: EventFeedItem[] = [
     title: 'Past Concert',
     description: 'An amazing concert I went to.',
     dateTime: createEventDate(-10, 20), // -10 days
-    distance: 50.0,
+    distance: getDistanceInMeters(MOCK_USER_LOCATION.lat, MOCK_USER_LOCATION.long, 47.6, -122.3),
     tags: ['Music'],
     images: [Soccer],
     status: 'published',
@@ -533,6 +574,13 @@ export const mockApi = {
       return Promise.resolve(event as unknown as T);
     }
 
+    // GET /events/:id/attendees
+    if (/^\/events\/[^/]+\/attendees$/.test(endpoint)) {
+      const id = endpoint.split('/')[2];
+      const attendees = getEventAttendees(id);
+      return Promise.resolve(attendees as unknown as T);
+    }
+
     // GET /users/managed-rsos
     if (endpoint === '/users/managed-rsos') {
       return Promise.resolve(MOCK_USERS.filter(u => u.userType === 'organization').slice(0, 1) as unknown as T);
@@ -541,6 +589,9 @@ export const mockApi = {
     // GET /users/:id/connections
     if (/^\/users\/[^/]+\/connections$/.test(endpoint)) {
       const userId = endpoint.split('/')[2];
+      // Special case: 'u9' has no connections
+      if (userId === 'u9') return Promise.resolve([] as unknown as T);
+
       return Promise.resolve(MOCK_USERS.filter(u => u._id !== userId).slice(0, 5) as unknown as T);
     }
 

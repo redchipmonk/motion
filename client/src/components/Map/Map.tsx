@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, ZoomControl, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, ZoomControl, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { type ReactNode, useEffect } from 'react'
 import L from 'leaflet'
@@ -27,24 +27,39 @@ type MapProps = {
   className?: string
   center?: [number, number]
   zoom?: number
+  offsetX?: number
 }
 
-const MapController = ({ center, zoom }: { center: [number, number], zoom: number }) => {
+const MapController = ({ center, zoom, offsetX = 0 }: { center: [number, number], zoom: number, offsetX?: number }) => {
   const map = useMap()
 
   useEffect(() => {
-    map.flyTo(center, zoom, {
+    const size = map.getSize()
+    const offsetPx = size.x * offsetX
+    const centerPoint = map.project(center, zoom)
+    const targetPoint = centerPoint.subtract([offsetPx, 0])
+    const targetCenter = map.unproject(targetPoint, zoom)
+
+    map.flyTo(targetCenter, zoom, {
       duration: 1.5
     })
-  }, [center, zoom, map])
+  }, [center, zoom, offsetX, map])
 
   return null
 }
 
-const Map = ({ children, className, center = UW_COORDS, zoom = 15.1 }: MapProps) => {
+const MapEvents = ({ onClick }: { onClick: () => void }) => {
+  useMapEvents({
+    click: onClick,
+  })
+  return null
+}
+
+const Map = ({ children, className, center = UW_COORDS, zoom = 15.1, offsetX = 0, onClick }: MapProps & { offsetX?: number, onClick?: () => void }) => {
   return (
     <MapContainer center={center} zoom={zoom} scrollWheelZoom={true} zoomControl={false} className={className} style={{ height: '100%', width: '100%' }}>
-      <MapController center={center} zoom={zoom} />
+      <MapController center={center} zoom={zoom} offsetX={offsetX} />
+      {onClick && <MapEvents onClick={onClick} />}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"

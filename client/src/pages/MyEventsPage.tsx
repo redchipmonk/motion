@@ -98,14 +98,32 @@ const MyEventsPage = () => {
       return matchesSearch && matchesTags;
     });
 
-    // 3. Sort (Basic Implementation)
-    return filtered.sort((a, b) => {
-      const dateA = new Date(a.dateTime).getTime();
-      const dateB = new Date(b.dateTime).getTime();
-      if (sortBy === 'soonest') return dateA - dateB;
-      return dateA - dateB;
-    }).map(e => ({ ...transformEventToSummary(e), status: e.status || 'draft' }));
-  }, [activeTab, user, searchTerm, selectedTags, sortBy]);
+    // 3. Sort & Format
+    const now = new Date();
+    const futureEvents = filtered.filter(e => new Date(e.dateTime) >= now)
+      .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+
+    const pastEvents = filtered.filter(e => new Date(e.dateTime) < now)
+      .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+
+    return [...futureEvents, ...pastEvents].map(e => {
+      const eventDate = new Date(e.dateTime);
+      const isPast = eventDate < now;
+
+      const summary = transformEventToSummary(e);
+
+      // Override datetime format for past events
+      if (isPast) {
+        summary.datetime = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      } else {
+        // Future events: "Feb 15 @ 10:00 AM" (matches transformEventToSummary default, but let's be explicit if needed)
+        // transformEventToSummary uses: format(new Date(event.dateTime), 'MMM d @ h:mm a')
+        // We can keep it or ensure consistency here.
+      }
+
+      return { ...summary, status: e.status || 'draft' };
+    });
+  }, [activeTab, user, searchTerm, selectedTags]);
 
   // Reset pagination when filters change
   useEffect(() => {

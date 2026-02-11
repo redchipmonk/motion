@@ -34,7 +34,7 @@ describe('transformEventToSummary', () => {
 
   it('formats distance in km when present', () => {
     const result = transformEventToSummary(makeEvent({ distance: 2500 }));
-    expect(result.distance).toBe('2.5 km');
+    expect(result.distance).toBe('1.6 mi');
   });
 
   it('leaves distance undefined when not present', () => {

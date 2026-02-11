@@ -1,6 +1,7 @@
 import { Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { useEffect, useRef } from 'react' // Added inputs
 import EventCard from '../EventCard'
 import type { EventSummary } from '../../types'
 
@@ -8,6 +9,9 @@ type EventMarkerProps = {
   event: EventSummary
   position: [number, number]
   onClick?: (event: EventSummary) => void
+  zIndexOffset?: number
+  forceOpenTooltip?: boolean // Added Prop
+  onHover?: (event: EventSummary) => void // Added Prop
 }
 
 const createCustomIcon = () => {
@@ -76,7 +80,19 @@ const createTodayIcon = (title: string) => {
 
 const defaultIcon = createCustomIcon()
 
-const EventMarker = ({ event, position, onClick }: EventMarkerProps) => {
+const EventMarker = ({ event, position, onClick, onHover, ...props }: EventMarkerProps) => {
+  const markerRef = useRef<L.Marker>(null)
+
+  useEffect(() => {
+    if (markerRef.current) {
+      if (props.forceOpenTooltip) {
+        markerRef.current.openTooltip()
+      } else {
+        markerRef.current.closeTooltip()
+      }
+    }
+  }, [props.forceOpenTooltip])
+
   const isToday = (() => {
     if (!event.startsAt) return false
     const date = new Date(event.startsAt)
@@ -90,10 +106,13 @@ const EventMarker = ({ event, position, onClick }: EventMarkerProps) => {
 
   return (
     <Marker
+      ref={markerRef}
       position={position}
       icon={icon}
+      zIndexOffset={props.zIndexOffset}
       eventHandlers={{
-        click: () => onClick?.(event)
+        click: () => onClick?.(event),
+        mouseover: () => onHover?.(event) // Added handler
       }}
     >
       <Tooltip

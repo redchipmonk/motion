@@ -316,7 +316,7 @@ const ProfilePage = () => {
         {targetUser.userType !== 'organization' && !isOwnProfile && (
           <section>
             <SectionHeader
-              title={`${connections.length} Mutual Connections`}
+              title={`${mutualConnections.length} Mutual Connections`}
               action={
                 <button
                   onClick={() => setIsMutualsListOpen(true)}

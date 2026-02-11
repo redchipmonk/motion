@@ -78,6 +78,10 @@ export class RsvpService {
     return this.rsvpModel.find({ event: eventId }).exec();
   }
 
+  async listRsvpsByEventPopulated(eventId: string) {
+    return this.rsvpModel.find({ event: eventId }).populate("user", "name avatarUrl handle bio userType").exec();
+  }
+
   async listRsvpsByUser(userId: string) {
     return this.rsvpModel.find({ user: userId }).exec();
   }

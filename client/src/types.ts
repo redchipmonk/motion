@@ -61,7 +61,7 @@ export interface EventDetail extends EventSummary {
     id: string;
     name: string;
     avatarUrl?: string;
-    status: 'following' | 'going' | 'interested';
+    status: 'following' | 'going' | 'interested' | 'waitlist';
   }[];
   galleryImages: string[];
   hostDetails: {

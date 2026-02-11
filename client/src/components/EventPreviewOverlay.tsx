@@ -18,13 +18,6 @@ import { useNavigate } from 'react-router-dom';
 import { HiArrowLongLeft, HiArrowLongRight, HiXMark } from 'react-icons/hi2';
 import { HiBookmark, HiOutlineBookmark } from 'react-icons/hi2';
 
-type EventPreviewOverlayProps = {
-  /** Event data to display in the overlay */
-  event: EventSummary;
-  /** Callback fired when overlay should close (ESC, backdrop click, or back button) */
-  onClose: () => void;
-};
-
 type RSVPStatus = 'going' | 'interested' | 'waitlist' | null;
 
 /**
@@ -44,6 +37,20 @@ const formatEventDate = (dateStr?: string): string => {
   }
 };
 
+// Removed unused type
+
+
+
+
+type EventPreviewOverlayProps = {
+  /** Event data to display in the overlay */
+  event: EventSummary;
+  /** Callback fired when overlay should close (ESC, backdrop click, or back button) */
+  onClose: () => void;
+  /** Callback fired when clicking 'Back to Map' */
+  onBackToMap?: () => void;
+};
+
 /**
  * Modal overlay component for event preview/details.
  * 
@@ -54,7 +61,7 @@ const formatEventDate = (dateStr?: string): string => {
  * - Scrollable description area
  * - Comprehensive RSVP button states based on capacity and user status
  */
-const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
+const EventPreviewOverlay = ({ event, onClose, onBackToMap }: EventPreviewOverlayProps) => {
   const navigate = useNavigate();
   // Mock RSVP status - in production, fetch this from API based on event.id
   const [userRsvpStatus, setUserRsvpStatus] = useState<RSVPStatus>(null);
@@ -277,6 +284,8 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
     return null;
   };
 
+
+
   return (
     <div
       className="absolute inset-0 z-[50] flex items-center justify-center bg-motion-plum/40 p-4"
@@ -288,7 +297,7 @@ const EventPreviewOverlay = ({ event, onClose }: EventPreviewOverlayProps) => {
       >
         {/* Floating Back Button */}
         <button
-          onClick={onClose}
+          onClick={onBackToMap || onClose} // Use onBackToMap if provided
           className={cn(
             "absolute -top-14 left-0 z-50 flex items-center gap-2 rounded-full px-8 py-1 text-xl font-medium border-2 border-transparent transition-all duration-150",
             "bg-motion-yellow text-motion-purple",

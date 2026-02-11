@@ -3,6 +3,7 @@ import { PipelineStage, Types } from "mongoose";
 import { protectedRoute, AuthRequest } from "../middleware/auth";
 import { eventService, CreateEventInput, UpdateEventInput } from "../services/eventService";
 import { asyncHandler } from "../middleware/asyncHandler";
+import { UserDocument } from "../models/user";
 
 const eventsRouter = Router();
 
@@ -112,6 +113,31 @@ eventsRouter.get("/:id", asyncHandler(async (req, res) => {
   const event = await eventService.getEventById(req.params.id);
   if (!event) return res.status(404).json({ error: "Event not found" });
   return res.json(event);
+}));
+
+/**
+ * GET /events/:id/attendees
+ * Returns the list of attendees for an event.
+ */
+eventsRouter.get("/:id/attendees", asyncHandler(async (req, res) => {
+  // Use dynamic import or just rely on the service being available
+  const { rsvpService } = await import("../services/rsvpService");
+  const rsvps = await rsvpService.listRsvpsByEventPopulated(req.params.id);
+
+  const attendees = rsvps.map(r => {
+    const user = r.user as unknown as UserDocument;
+    return {
+      id: user._id,
+      name: user.name,
+      avatarUrl: user.profileImage,
+      handle: user.handle,
+      bio: user.bio,
+      userType: user.userType,
+      status: r.status,
+    };
+  });
+
+  return res.json(attendees);
 }));
 
 /**

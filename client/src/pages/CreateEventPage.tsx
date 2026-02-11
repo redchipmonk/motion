@@ -338,50 +338,92 @@ const CreateEventPage = () => {
                 {errors.description && <p className="text-red-500">{errors.description.message}</p>}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-8 pt-2">
-                {isEditing ? (
-                  // Edit Mode Buttons
-                  <>
-                    <button
-                      type="submit" // Save updates
-                      disabled={isSubmitting}
-                      className="flex-1 rounded-2xl border-2 border-transparent bg-motion-yellow px-8 py-2 text-2xl font-bold text-motion-plum transition-colors duration-200 hover:border-motion-plum active:bg-motion-orange active:text-white active:border-motion-orange"
-                    >
-                      {isSubmitting ? 'Saving...' : 'Save Event'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      disabled={isSubmitting}
-                      className="flex-1 rounded-2xl border-2 border-transparent bg-motion-purple px-8 py-2 text-2xl font-bold text-white transition-colors duration-200 hover:border-motion-orange active:bg-motion-orange active:border-motion-orange"
-                    >
-                      Delete Event
-                    </button>
-                  </>
-                ) : (
-                  // Create Mode Buttons
-                  <>
-                    <button
-                      type="submit"
-                      onClick={() => setValue('status', 'published')}
-                      disabled={isSubmitting}
-                      className="flex-1 rounded-2xl border-2 border-transparent bg-motion-purple px-8 py-2 text-2xl font-bold text-white transition-colors duration-200 hover:border-motion-orange active:bg-motion-orange active:border-motion-orange"
-                    >
-                      {isSubmitting ? 'Publishing...' : 'Publish Event'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setValue('status', 'draft')
-                        handleSubmit(onSubmit)()
-                      }}
-                      disabled={isSubmitting}
-                      className="flex-1 rounded-2xl border-2 border-transparent bg-motion-yellow px-8 py-2 text-2xl font-bold text-motion-plum transition-colors duration-200 hover:border-motion-plum active:bg-motion-orange active:text-white active:border-motion-orange"
-                    >
-                      Save to Drafts
-                    </button>
-                  </>
+              <div className="flex flex-col gap-4 pt-2">
+                <div className="flex items-center gap-4">
+                  {!isEditing ? (
+                    // Create Mode: Always show Publish (Primary) and Draft (Secondary)
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setValue('status', 'draft')
+                          handleSubmit(onSubmit)()
+                        }}
+                        disabled={isSubmitting}
+                        className="flex-1 rounded-2xl border-2 border-transparent bg-motion-yellow px-8 py-2 text-2xl font-bold text-motion-plum transition-colors duration-200 hover:border-motion-plum active:bg-motion-orange active:text-white active:border-motion-orange"
+                      >
+                        {isSubmitting ? 'Saving...' : 'Save Draft'}
+                      </button>
+                      <button
+                        type="submit"
+                        onClick={() => setValue('status', 'published')}
+                        disabled={isSubmitting}
+                        className="flex-1 rounded-2xl border-2 border-transparent bg-motion-purple px-8 py-2 text-2xl font-bold text-white transition-colors duration-200 hover:border-motion-orange active:bg-motion-orange active:border-motion-orange"
+                      >
+                        {isSubmitting ? 'Publishing...' : 'Publish Event'}
+                      </button>
+                    </>
+                  ) : (
+                    // Edit Mode
+                    // If Published: Unpublish (Secondary) + Update (Primary)
+                    // If Draft: Save Draft (Secondary) + Publish (Primary)
+                    watch('status') === 'published' ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setValue('status', 'draft')
+                            handleSubmit(onSubmit)()
+                          }}
+                          disabled={isSubmitting}
+                          className="flex-1 rounded-2xl border-2 border-motion-purple bg-white px-8 py-2 text-2xl font-bold text-motion-purple transition-colors duration-200 hover:bg-red-50 hover:text-red-600 hover:border-red-600 active:bg-red-100"
+                        >
+                          {isSubmitting ? '... ' : 'Unpublish'}
+                        </button>
+                        <button
+                          type="submit"
+                          onClick={() => setValue('status', 'published')} // Ensure status stays published
+                          disabled={isSubmitting}
+                          className="flex-1 rounded-2xl border-2 border-transparent bg-motion-purple px-8 py-2 text-2xl font-bold text-white transition-colors duration-200 hover:border-motion-orange active:bg-motion-orange active:border-motion-orange"
+                        >
+                          {isSubmitting ? 'Updating...' : 'Update Event'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button" // Save Draft
+                          onClick={() => {
+                            setValue('status', 'draft')
+                            handleSubmit(onSubmit)()
+                          }}
+                          disabled={isSubmitting}
+                          className="flex-1 rounded-2xl border-2 border-transparent bg-motion-yellow px-8 py-2 text-2xl font-bold text-motion-plum transition-colors duration-200 hover:border-motion-plum active:bg-motion-orange active:text-white active:border-motion-orange"
+                        >
+                          {isSubmitting ? 'Saving...' : 'Save Draft'}
+                        </button>
+                        <button
+                          type="submit" // Publish
+                          onClick={() => setValue('status', 'published')}
+                          disabled={isSubmitting}
+                          className="flex-1 rounded-2xl border-2 border-transparent bg-motion-purple px-8 py-2 text-2xl font-bold text-white transition-colors duration-200 hover:border-motion-orange active:bg-motion-orange active:border-motion-orange"
+                        >
+                          {isSubmitting ? 'Publishing...' : 'Publish Event'}
+                        </button>
+                      </>
+                    )
+                  )}
+                </div>
+
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isSubmitting}
+                    className="self-center text-lg font-medium text-red-500 hover:text-red-700 hover:underline transition-colors"
+                  >
+                    Delete Event
+                  </button>
                 )}
               </div>
             </div>
