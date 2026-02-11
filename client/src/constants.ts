@@ -41,3 +41,9 @@ export type EventTag = typeof EVENT_TAGS[number];
 
 /** Base URL for the Motion API */
 export const API_BASE_URL = 'http://localhost:8000';
+
+/**
+ * Toggle mock data mode. Set to `true` to use mock data instead of real API calls.
+ * Change this single line to switch between development (mock) and production (real API) modes.
+ */
+export const USE_MOCK_DATA = true;

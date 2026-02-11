@@ -14,6 +14,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { api } from '../lib/api';
+import { apiClient } from '../lib/apiClient';
 import { VISIBILITY_OPTIONS } from '../constants';
 import LocationAutocomplete from '../components/LocationAutocomplete';
 import ImagePicker from '../components/ImagePicker';
@@ -22,6 +23,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { GoChevronDown, GoCheck } from 'react-icons/go';
 import { useAuth } from '../context/AuthContext';
+import type { EventFeedItem } from '../types';
 
 // Schema Definition
 const eventSchema = z.object({
@@ -85,32 +87,23 @@ const CreateEventPage = () => {
     }
   })
 
-  // Fetch Event Data if in Edit Mode
   useEffect(() => {
     if (isEditing && id) {
       const fetchEvent = async () => {
         try {
-          // Use mock data for now - in production, use API
-          const { getEventById } = await import('../data/mockData')
-          const event = getEventById(id)
+          const event = await apiClient.get<EventFeedItem>(`/events/${id}`);
 
           if (!event) {
-            setError("Event not found.")
-            return
+            setError("Event not found.");
+            return;
           }
 
-          // Parse Date
-          const dateObj = new Date(event.dateTime)
-          const dateStr = dateObj.toISOString().split('T')[0]
-          const timeStr = dateObj.toTimeString().slice(0, 5) // HH:MM
+          const dateObj = new Date(event.dateTime);
+          const dateStr = dateObj.toISOString().split('T')[0];
+          const timeStr = dateObj.toTimeString().slice(0, 5);
+          const endTimeStr = '';
 
-          const endTimeStr = ''
-          // Since mock data doesn't have endDateTime, skip this
-          // if (event.endDateTime) {
-          //   endTimeStr = new Date(event.endDateTime).toTimeString().slice(0, 5)
-          // }
-
-          setTags(event.tags || [])
+          setTags(event.tags || []);
 
           reset({
             title: event.title,
@@ -123,19 +116,19 @@ const CreateEventPage = () => {
               coordinates: event.location.coordinates
             },
             status: event.status || 'published',
-            visibility: 'public', // Default since mock data doesn't have this
-            hideLocation: false, // Default since mock data doesn't have this
-            capacity: undefined, // Mock data doesn't have capacity
+            visibility: 'public',
+            hideLocation: false,
+            capacity: undefined,
             tags: event.tags || [],
-          })
+          });
         } catch (err) {
-          console.error("Failed to fetch event", err)
-          setError("Failed to load event details.")
+          console.error("Failed to fetch event", err);
+          setError("Failed to load event details.");
         }
-      }
-      fetchEvent()
+      };
+      fetchEvent();
     }
-  }, [isEditing, id, reset])
+  }, [isEditing, id, reset]);
 
   // Watch for controlled inputs
   const hideLocation = watch('hideLocation');

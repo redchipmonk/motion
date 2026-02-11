@@ -1,50 +1,20 @@
-/**
- * @file Main events discovery page with map and feed.
- * 
- * Displays an interactive map with event markers and a scrollable feed.
- * Clicking an event shows a preview overlay. Uses mock data as fallback
- * when API is unavailable.
- * 
- * @example
- * // Route: /events or /
- */
-
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import EventFeedList from '../components/EventFeedList'
-import { MOCK_EVENTS } from '../data/mockData'
 import Map from '../components/Map/Map'
 import EventMarker from '../components/Map/EventMarker'
 import EventPreviewOverlay from '../components/EventPreviewOverlay'
-import { api } from '../lib/api'
+import { apiClient } from '../lib/apiClient'
 import type { EventSummary, EventFeedItem, User } from '../types'
 import { useAuth } from '../context/AuthContext'
-import { format } from 'date-fns';
-
-const transformEvent = (event: EventFeedItem): EventSummary => ({
-  id: event._id,
-  title: event.title,
-  host: event.creatorDetails?.name || 'Unknown Host',
-  hostId: event.creatorDetails?._id || (typeof event.createdBy === 'string' ? event.createdBy : event.createdBy?._id),
-  datetime: format(new Date(event.dateTime), 'MMM d @ h:mm a'),
-  startsAt: event.dateTime,
-  distance: event.distance ? `${(event.distance / 1000).toFixed(1)} km` : undefined,
-  tags: event.tags || [],
-  heroImageUrl: event.images?.[0] || '/placeholder-event.jpg',
-  location: {
-    coordinates: event.location.coordinates,
-    address: event.location.address
-  },
-  description: event.description
-});
+import { transformEventToSummary } from '../lib/transforms';
 
 const EventsPage = () => {
   const { user } = useAuth()
-  const [events, setEvents] = useState<EventSummary[]>(() => MOCK_EVENTS.map(transformEvent)) // Initialize with transformed mock data
+  const [events, setEvents] = useState<EventSummary[]>([])
   const [selectedEvent, setSelectedEvent] = useState<EventSummary | null>(null)
   const [mapCenter, setMapCenter] = useState<[number, number]>([47.6558, -122.3268])
   const [searchParams, setSearchParams] = useSearchParams()
-  // Capture "now" at mount/render time purely
   const [now] = useState(() => Date.now())
 
   // Social Graph State
@@ -53,44 +23,28 @@ const EventsPage = () => {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      if (!user) {
-        console.warn('User not authenticated, using mock data')
-        setEvents(MOCK_EVENTS.map(transformEvent))
-        return
-      }
+      if (!user) return;
 
       try {
-        // Fetch User Social Graph
-        // We need full user object to get following/connections arrays
-        const userProfile = await api.get<User>(`/users/${user._id}`);
-        // Extract IDs regardless of whether they are populated objects or strings
+        const userProfile = await apiClient.get<User>(`/users/${user._id}`);
         const fIds = (userProfile.following || []).map((u: string | User) => typeof u === 'object' ? u._id : u);
         const cIds = (userProfile.connections || []).map((u: string | User) => typeof u === 'object' ? u._id : u);
         setFollowingIds(fIds);
         setConnectionIds(cIds);
 
-        // UW (University of Washington) Seattle campus coordinates
         const lat = 47.6554
         const long = -122.3001
-        const radius = 10 // km
+        const radius = 10
 
-        const data = await api.get<EventFeedItem[]>(
+        const data = await apiClient.get<EventFeedItem[]>(
           `/events/feed?userId=${user._id}&lat=${lat}&long=${long}&radius=${radius}`
         )
 
-        console.log('Raw API response:', data)
-
-        // Transform backend response to EventSummary format
         if (data && data.length > 0) {
-          const transformedEvents = data.map(transformEvent)
-          console.log('Transformed events:', transformedEvents)
-          setEvents(transformedEvents)
-        } else {
-          console.log('No events returned from API')
+          setEvents(data.map(transformEventToSummary))
         }
       } catch (error) {
-        console.warn('Failed to fetch events, using mock data:', error)
-        setEvents(MOCK_EVENTS.map(transformEvent))
+        console.error('Failed to fetch events:', error)
       }
     }
 

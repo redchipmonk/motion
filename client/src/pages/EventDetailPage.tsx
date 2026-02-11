@@ -1,49 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { HiBookmark, HiOutlineBookmark, HiXMark, HiUser } from 'react-icons/hi2';
+import { HiBookmark, HiOutlineBookmark, HiXMark } from 'react-icons/hi2';
 import { TiLocation } from 'react-icons/ti';
 import { TfiLayoutGrid2Alt } from 'react-icons/tfi';
-import { api } from '../lib/api';
+import { apiClient } from '../lib/apiClient';
 import { useAuth } from '../context/AuthContext';
 import { useSocial } from '../hooks/useSocial';
 import type { EventSummary, EventDetail, User, EventFeedItem } from '../types';
-import { getEventById, getEventAttendees, getEventsByHost, getSimilarEvents } from '../data/mockData';
 import EventCard from '../components/EventCard';
 import { motionTheme, cn } from '../theme';
 import UserListOverlay from '../components/UserListOverlay';
-
-// --- Sub-components (could receive their own files later) ---
-
-const AttendeeAvatar = ({ name, status }: { name: string; status: string }) => (
-  <div className="flex flex-col items-center gap-1">
-    <div className="h-40 w-40 rounded-full bg-white flex items-center justify-center text-9xl text-[#d8b4fe] border-2 border-transparent shadow-lg text-motion-purple">
-      <HiUser />
-    </div>
-    <span className="text-base font-bold text-motion-purple">{name}</span>
-    <span className="text-xs font-medium text-motion-purple/80 tracking-wide uppercase">
-      {status === 'following' ? 'FOLLOWING' : status}
-    </span>
-  </div>
-);
-
-const SectionHeader = ({ title, action }: { title: string; action?: React.ReactNode }) => (
-  <div className="flex items-center gap-4 mb-6">
-    <h3 className="text-3xl font-bold text-motion-plum">{title}</h3>
-    {action}
-  </div>
-);
+import AttendeeAvatar from '../components/AttendeeAvatar';
+import SectionHeader from '../components/SectionHeader';
+import LoadingScreen from '../components/LoadingScreen';
 
 type RSVPStatus = 'going' | 'interested' | 'waitlist' | null;
-
-// --- Main Page Component ---
 
 const EventDetailPage = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth(); // Get current user
-
-  // Capture "now" at mount/render time purely to avoid purity lint errors
+  const { user } = useAuth();
   const [now] = useState(() => Date.now());
 
   // Scroll to top on mount or eventId change
@@ -54,10 +31,7 @@ const EventDetailPage = () => {
     }
   }, [eventId]);
 
-  // Mock RSVP status - in production, fetch this from API based on event.id
   const [userRsvpStatus, setUserRsvpStatus] = useState<RSVPStatus>(null);
-
-  // Mock event capacity data - in production, fetch from event details
   const [eventCapacity] = useState<{ current: number; max: number }>({ current: 25, max: 30 });
   const isCapacityFull = eventCapacity.current >= eventCapacity.max;
 
@@ -68,60 +42,43 @@ const EventDetailPage = () => {
 
   const IMAGES_PER_PAGE = 3;
 
-  // Attendees modal state
-  // Attendees modal state
   const [isAttendeesListOpen, setIsAttendeesListOpen] = useState(false);
-
-  // State for real data fetching
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Hooks for API and Auth
-  // const { user } = useAuth(); // We might need this later, but useSocial handles auth internally for actions
-
-  // Prepare host user object for useSocial hook
   const hostUser: User | null = event ? {
     _id: event.hostDetails.id,
     name: event.hostDetails.name,
-    email: '', // Not needed for actions
-    handle: '', // Not needed
-    userType: event.hostDetails.userType || 'individual', // Default fallback
+    email: '',
+    handle: '',
+    userType: event.hostDetails.userType || 'individual',
     avatarUrl: event.hostDetails.avatarUrl,
     bio: event.hostDetails.bio
   } : null;
 
   const { connectionStatus, isFollowing, handleConnect, handleFollow, loading: socialLoading } = useSocial(hostUser);
 
-  // Fetch event data
   useEffect(() => {
     if (!eventId) return;
 
     const fetchEventData = async () => {
       setLoading(true);
       try {
-        // 1. Fetch Event Details
-        const eventData = await api.get<EventFeedItem>(`/events/${eventId}`);
+        const eventData = await apiClient.get<EventFeedItem>(`/events/${eventId}`);
+        if (!eventData) throw new Error('Event not found');
 
-        if (!eventData) throw new Error("Event not found");
+        // Extract creator details from the various possible shapes
+        const raw = eventData as EventFeedItem & { hostDetails?: User };
+        let creator: Partial<User> = raw.creatorDetails || raw.hostDetails || (typeof raw.createdBy === 'object' ? raw.createdBy as User : {});
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const rawEvent = eventData as any;
-        let creator = rawEvent.creatorDetails || rawEvent.hostDetails || (typeof rawEvent.createdBy === 'object' ? rawEvent.createdBy : {}) || {};
-
-        // Fallback: If creator has no name and createdBy is an ID, fetch the user
         if (!creator.name && typeof eventData.createdBy === 'string') {
           try {
-            const userRes = await api.get<User>(`/users/${eventData.createdBy}`);
-            creator = userRes;
-          } catch (e) {
-            console.warn("Failed to fetch host details", e);
-          }
+            creator = await apiClient.get<User>(`/users/${eventData.createdBy}`);
+          } catch { /* use partial creator */ }
         }
 
-        // 2. Fetch Other Events by Host (optional, can be parallel)
-        const otherEventsData = await api.get<EventFeedItem[]>(`/events?createdBy=${creator._id}&limit=3`);
+        const otherEventsData = await apiClient.get<EventFeedItem[]>(`/events?createdBy=${creator._id}&limit=3`);
 
-        // Transform to EventDetail
         const transformed: EventDetail = {
           id: eventData._id,
           title: eventData.title,
@@ -135,12 +92,12 @@ const EventDetailPage = () => {
             coordinates: eventData.location?.coordinates || [0, 0],
             address: eventData.location?.address
           },
-          description: eventData.description || "No description provided.",
+          description: eventData.description || 'No description provided.',
           attendeeCount: eventData.participantCount || 0,
-          attendees: [], // Todo: fetch real attendees
+          attendees: [],
           galleryImages: eventData.images || [],
           hostDetails: {
-            id: creator._id,
+            id: creator._id || '',
             name: creator.name || 'Unknown',
             avatarUrl: creator.avatarUrl || '',
             mutualConnections: 0,
@@ -162,90 +119,13 @@ const EventDetailPage = () => {
               },
               tags: e.tags || []
             })),
-          similarEvents: [] // Todo: Implement similar events endpoint
+          similarEvents: []
         };
 
         setEvent(transformed);
-
       } catch (err) {
-        console.warn("Failed to fetch event from API, trying mock data...", err);
-
-        // Fallback to Mock Data
-        // We need to import these functions again inside the component or make sure they are available
-        // They are imported at the top, so we can use them.
-
-        // This logic mirrors the previous useMemo logic
-        const found = getEventById(eventId || '');
-        if (found) {
-          const attendees = getEventAttendees(found._id);
-          const otherEvents = getEventsByHost(found.creatorDetails?._id || '');
-          const similarEvents = getSimilarEvents(found._id);
-
-          const mockEvent: EventDetail = {
-            id: found._id,
-            title: found.title,
-            host: found.creatorDetails?.name || 'Unknown Host',
-            datetime: new Date(found.dateTime).toLocaleString(),
-            startsAt: found.dateTime,
-            distance: found.distance ? `${(found.distance / 1000).toFixed(1)} km` : undefined,
-            tags: found.tags || [],
-            heroImageUrl: found.images?.[0] || '/placeholder-event.jpg',
-            location: {
-              coordinates: found.location.coordinates,
-              address: found.location.address
-            },
-            description: found.description || "No description provided.",
-            attendeeCount: found.participantCount || 0,
-            attendees: attendees
-              .filter(a => a.status === 'going' || a.status === 'interested')
-              .map(a => ({
-                id: a._id,
-                name: a.name,
-                avatarUrl: a.avatarUrl,
-                status: a.status as 'following' | 'going' | 'interested'
-              })),
-            galleryImages: found.images ? [...found.images, ...found.images, ...found.images] : [],
-            hostDetails: {
-              id: found.creatorDetails?._id || 'h0',
-              name: found.creatorDetails?.name || 'Unknown',
-              avatarUrl: found.creatorDetails?.avatarUrl || found.images?.[0] || '',
-              mutualConnections: 0,
-              bio: found.creatorDetails?.bio || 'No bio available.',
-              userType: 'individual' // Mock data default
-            },
-            otherEventsByHost: otherEvents
-              .filter(e => e._id !== found._id)
-              .slice(0, 3)
-              .map(e => ({
-                id: e._id,
-                title: e.title,
-                host: e.creatorDetails?.name || 'Unknown',
-                datetime: format(new Date(e.dateTime), 'MMM d @ h:mm a'),
-                heroImageUrl: e.images?.[0] || '',
-                location: {
-                  coordinates: e.location.coordinates,
-                  address: e.location.address
-                },
-                tags: e.tags || []
-              })),
-            similarEvents: similarEvents.map(e => ({
-              id: e._id,
-              title: e.title,
-              host: e.creatorDetails?.name || 'Unknown',
-              datetime: format(new Date(e.dateTime), 'MMM d @ h:mm a'),
-              heroImageUrl: e.images?.[0] || '',
-              location: {
-                coordinates: e.location.coordinates,
-                address: e.location.address
-              },
-              tags: e.tags || []
-            }))
-          };
-          setEvent(mockEvent);
-        } else {
-          console.error("Event not found in mock data either.");
-          setEvent(null);
-        }
+        console.error('Failed to fetch event:', err);
+        setEvent(null);
       } finally {
         setLoading(false);
       }
@@ -412,9 +292,7 @@ const EventDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-motion-lavender">
-        <div className="text-xl font-bold text-motion-plum animate-pulse">Loading Event...</div>
-      </div>
+      <LoadingScreen message="Loading Event..." />
     )
   }
 

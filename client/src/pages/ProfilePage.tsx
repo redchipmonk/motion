@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../lib/apiClient';
 import { api } from '../lib/api';
 import EventCard from '../components/EventCard';
 import { cn } from '../theme';
@@ -9,28 +10,10 @@ import { HiUser, HiCheck, HiXMark } from 'react-icons/hi2';
 import { FaInstagram, FaFacebook } from 'react-icons/fa';
 import type { User, EventFeedItem } from '../types';
 import UserListOverlay from '../components/UserListOverlay';
-import { getUserById, getEventsByHost, MOCK_USERS, MOCK_EVENTS, MOCK_RSVPS } from '../data/mockData';
-
-// --- Components ---
-
-const AttendeeAvatar = ({ name, status }: { name: string; status: string }) => (
-  <div className="flex flex-col items-center gap-1 shrink-0">
-    <div className="h-40 w-40 rounded-full bg-white flex items-center justify-center text-9xl text-[#d8b4fe] border-2 border-transparent shadow-lg text-motion-purple overflow-hidden">
-      <HiUser />
-    </div>
-    <span className="text-base font-bold text-motion-purple text-center max-w-[160px] truncate">{name}</span>
-    <span className="text-xs font-medium text-motion-purple/80 tracking-wide uppercase">
-      {status}
-    </span>
-  </div>
-);
-
-const SectionHeader = ({ title, action }: { title: string; action?: React.ReactNode }) => (
-  <div className="flex items-center gap-4 mb-6">
-    <h3 className="text-3xl font-bold text-motion-plum">{title}</h3>
-    {action}
-  </div>
-);
+import { MOCK_EVENTS, MOCK_RSVPS } from '../data/mockData';
+import AttendeeAvatar from '../components/AttendeeAvatar';
+import SectionHeader from '../components/SectionHeader';
+import LoadingScreen from '../components/LoadingScreen';
 
 const ProfilePage = () => {
   const { userId } = useParams();
@@ -78,95 +61,39 @@ const ProfilePage = () => {
     const loadProfile = async () => {
       setLoading(true);
       try {
-        // 1. Fetch User Details
-        const user = await api.get<User>(`/users/${targetUserId}`);
+        const user = await apiClient.get<User>(`/users/${targetUserId}`);
         setTargetUser(user);
 
-        // 2. Fetch Social Connections
-        // For Students: Show friends/connections
-        // For RSOs: Show followers (managed differently, maybe just count or sample?)
-        // The endpoint /:id/connections returns the 'connections' field.
-        const userConnections = await api.get<User[]>(`/users/${targetUserId}/connections`);
+        const userConnections = await apiClient.get<User[]>(`/users/${targetUserId}/connections`);
         setConnections(userConnections);
 
-        // 3. Fetch Events (Hosted)
-        const userEvents = await api.get<EventFeedItem[]>(`/events?createdBy=${targetUserId}`);
+        const userEvents = await apiClient.get<EventFeedItem[]>(`/events?createdBy=${targetUserId}`);
         setEvents(userEvents);
 
-        // 4. If viewing own profile, fetch managed RSOs
         if (isOwnProfile && authUser) {
-          const rsos = await api.get<User[]>(`/users/managed-rsos`);
+          const rsos = await apiClient.get<User[]>(`/users/managed-rsos`);
           setManagedRSOs(rsos);
         }
 
-        // 5. Determine Relationship Status (if viewing someone else)
         if (authUser && !isOwnProfile) {
           if (user.userType === 'organization') {
-            // Check if following
-            // Ideally backend returns this, but for now we iterate 'followers' or check 'following' on authUser
-            // Let's check authUser's following list (re-fetch auth user or rely on context if updated)
-            const freshAuthUser = await api.get<User>(`/users/${authUser._id}`);
+            const freshAuthUser = await apiClient.get<User>(`/users/${authUser._id}`);
             const followingIds = freshAuthUser.following?.map((u: string | User) => typeof u === 'string' ? u : u._id) || [];
             setIsFollowing(followingIds.includes(targetUserId));
           } else {
-            // Check connection status
-            // Simple check: is target in my connections?
-            const freshAuthUser = await api.get<User>(`/users/${authUser._id}`);
+            const freshAuthUser = await apiClient.get<User>(`/users/${authUser._id}`);
             const myConnectionIds = freshAuthUser.connections?.map((u: string | User) => typeof u === 'string' ? u : u._id) || [];
-
             if (myConnectionIds.includes(targetUserId)) {
               setConnectionStatus('accepted');
             } else {
-              // Check if pending request exists? We assumed 'pending' logic in backend.
-              // For MVP, if not connected, we assume 'none' or we'd need a specific endpoint to check request status.
-              // The implementation plan says "Implement 'Pending' state". 
-              // We don't have an endpoint to check request status specifically yet, 
-              // but we can assume 'none' for now or handle the 400 error "Request pending" to update state.
               setConnectionStatus('none');
             }
           }
         } else {
           setConnectionStatus('self');
         }
-
       } catch (err) {
-        console.warn("Failed to load profile from API, trying mock data...", err);
-
-        // Fallback to Mock Data
-        const foundUser = getUserById(targetUserId);
-        if (foundUser) {
-          setTargetUser(foundUser);
-
-          // Mock Connections
-          // If viewing self, connections = specific mock users? 
-          // For now, let's just return a few random mock users as "connections"
-          const mockConnections = MOCK_USERS.filter(u => u._id !== targetUserId).slice(0, 5);
-          setConnections(mockConnections);
-
-          // Mock Events
-          const mockEvents = getEventsByHost(targetUserId);
-          // Transform mock events (which are EventFeedItem) to match what API returns? 
-          // The API returns EventFeedItem[], so this matches.
-          setEvents(mockEvents);
-
-          // Mock Managed RSOs (if self)
-          if (isOwnProfile && authUser) {
-            // Return a mock RSO if one exists in MOCK_USERS
-            const mockRSOs = MOCK_USERS.filter(u => u.userType === 'organization').slice(0, 1);
-            setManagedRSOs(mockRSOs);
-          }
-
-          // Mock Social Status
-          if (authUser && !isOwnProfile) {
-            // Randomize connection status for demo? or just 'none'
-            setConnectionStatus('none');
-          } else {
-            setConnectionStatus('self');
-          }
-
-        } else {
-          console.error("User not found in mock data either.");
-        }
+        console.error('Failed to load profile:', err);
       } finally {
         setLoading(false);
       }
@@ -180,12 +107,9 @@ const ProfilePage = () => {
     setActionLoading(true);
     try {
       await api.post('/users/request-connection', { recipientId: targetUser._id });
-      setConnectionStatus('pending'); // Optimistic update
-      alert("Connection request sent!");
+      setConnectionStatus('pending');
     } catch (err) {
-      // If error says "already pending", set pending
-      console.error(err);
-      alert("Failed to connect");
+      console.error('Failed to send connection request:', err);
     } finally {
       setActionLoading(false);
     }
@@ -210,9 +134,7 @@ const ProfilePage = () => {
   };
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center bg-motion-lavender">
-      <div className="text-xl font-bold text-motion-plum animate-pulse">Loading Profile...</div>
-    </div>
+    return <LoadingScreen message="Loading Profile..." />;
   }
 
   if (!targetUser) {

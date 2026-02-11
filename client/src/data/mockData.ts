@@ -497,14 +497,76 @@ export const getMutualFollowers = (currentUserId: string, targetUserId: string):
 };
 
 export const getUserEvents = (userId: string): EventFeedItem[] => {
-  // Return events hosted by user OR events user is attending
   const hosted = MOCK_EVENTS.filter(e => e.creatorDetails?._id === userId);
   const rsvped = MOCK_RSVPS
     .filter(r => r.userId === userId && ['going', 'interested'].includes(r.status))
     .map(r => MOCK_EVENTS.find(e => e._id === r.eventId))
     .filter((e): e is EventFeedItem => !!e);
 
-  // Deduplicate and return
   const all = [...hosted, ...rsvped];
   return Array.from(new Map(all.map(item => [item._id, item])).values());
 };
+
+/**
+ * Mock API that mirrors the real `api` interface.
+ * Routes requests based on URL pattern matching to return properly shaped mock data.
+ */
+export const mockApi = {
+  get<T>(endpoint: string): Promise<T> {
+    // GET /events/feed?userId=...&lat=...&long=...&radius=...
+    if (endpoint.startsWith('/events/feed')) {
+      return Promise.resolve(MOCK_EVENTS.filter(e => e.status === 'published') as unknown as T);
+    }
+
+    // GET /events?createdBy=...
+    if (endpoint.startsWith('/events?createdBy=')) {
+      const match = endpoint.match(/createdBy=([^&]+)/);
+      const hostId = match?.[1] ?? '';
+      return Promise.resolve(getEventsByHost(hostId) as unknown as T);
+    }
+
+    // GET /events/:id
+    if (/^\/events\/[^/?]+$/.test(endpoint)) {
+      const id = endpoint.split('/').pop()!;
+      const event = getEventById(id);
+      if (!event) return Promise.reject(new Error('Event not found'));
+      return Promise.resolve(event as unknown as T);
+    }
+
+    // GET /users/managed-rsos
+    if (endpoint === '/users/managed-rsos') {
+      return Promise.resolve(MOCK_USERS.filter(u => u.userType === 'organization').slice(0, 1) as unknown as T);
+    }
+
+    // GET /users/:id/connections
+    if (/^\/users\/[^/]+\/connections$/.test(endpoint)) {
+      const userId = endpoint.split('/')[2];
+      return Promise.resolve(MOCK_USERS.filter(u => u._id !== userId).slice(0, 5) as unknown as T);
+    }
+
+    // GET /users/:id
+    if (/^\/users\/[^/?]+$/.test(endpoint)) {
+      const userId = endpoint.split('/').pop()!;
+      const user = getUserById(userId);
+      if (!user) return Promise.reject(new Error('User not found'));
+      return Promise.resolve(user as unknown as T);
+    }
+
+    return Promise.reject(new Error(`Mock API: unhandled GET ${endpoint}`));
+  },
+
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  post<T>(endpoint: string, body?: unknown): Promise<T> {
+    return Promise.resolve({} as T);
+  },
+
+  patch<T>(endpoint: string, body?: unknown): Promise<T> {
+    return Promise.resolve({} as T);
+  },
+
+  delete<T>(endpoint: string): Promise<T> {
+    return Promise.resolve({} as T);
+  },
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+};
+

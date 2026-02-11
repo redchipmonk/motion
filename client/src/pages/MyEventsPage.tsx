@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
-import { format } from 'date-fns';
 import { FaFilter } from 'react-icons/fa';
 import { HiArrowLongLeft, HiArrowLongRight } from 'react-icons/hi2';
 import EventCard from '../components/EventCard';
@@ -9,25 +8,10 @@ import { MOCK_EVENTS, MOCK_RSVPS } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import { FilterPanel, type SortOption, type TimeOption } from '../components/FilterPanel';
 import { EVENT_TAGS } from '../constants';
-import type { EventSummary, EventFeedItem } from '../types';
+import type { EventFeedItem } from '../types';
+import { transformEventToSummary } from '../lib/transforms';
 
 type Tab = 'rsvped' | 'hosted';
-
-// Helper to transform raw event data into UI-ready EventSummary
-const transformEvent = (event: EventFeedItem): EventSummary => ({
-  id: event._id,
-  title: event.title,
-  host: event.creatorDetails?.name || 'Unknown Host',
-  datetime: format(new Date(event.dateTime), 'MMM d @ h:mm a'),
-  startsAt: event.dateTime,
-  distance: event.distance ? `${(event.distance / 1000).toFixed(1)} km` : undefined,
-  tags: event.tags || [],
-  heroImageUrl: event.images?.[0] || '/placeholder-event.jpg',
-  status: event.status || 'draft', // Default to draft if not specified
-  location: {
-    coordinates: event.location.coordinates
-  }
-});
 
 const ITEMS_PER_PAGE = 6;
 
@@ -120,7 +104,7 @@ const MyEventsPage = () => {
       const dateB = new Date(b.dateTime).getTime();
       if (sortBy === 'soonest') return dateA - dateB;
       return dateA - dateB;
-    }).map(transformEvent);
+    }).map(e => ({ ...transformEventToSummary(e), status: e.status || 'draft' }));
   }, [activeTab, user, searchTerm, selectedTags, sortBy]);
 
   // Reset pagination when filters change
