@@ -98,7 +98,8 @@ const MyEventsPage = () => {
         (r) => r.userId === user._id && ['going', 'interested', 'waitlist'].includes(r.status)
       );
       const rsvpedEventIds = new Set(userRsvps.map((r) => r.eventId));
-      baseList = MOCK_EVENTS.filter((e) => rsvpedEventIds.has(e._id));
+      // Filter events user has RSVP'd to, but exclude events hosted by the user
+      baseList = MOCK_EVENTS.filter((e) => rsvpedEventIds.has(e._id) && e.creatorDetails?._id !== user._id);
     }
 
     // Deduplicate

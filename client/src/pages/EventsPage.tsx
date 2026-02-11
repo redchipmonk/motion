@@ -25,6 +25,7 @@ const transformEvent = (event: EventFeedItem): EventSummary => ({
   id: event._id,
   title: event.title,
   host: event.creatorDetails?.name || 'Unknown Host',
+  hostId: event.creatorDetails?._id || (typeof event.createdBy === 'string' ? event.createdBy : event.createdBy?._id),
   datetime: format(new Date(event.dateTime), 'MMM d @ h:mm a'),
   startsAt: event.dateTime,
   distance: event.distance ? `${(event.distance / 1000).toFixed(1)} km` : undefined,
@@ -46,6 +47,10 @@ const EventsPage = () => {
   // Capture "now" at mount/render time purely
   const [now] = useState(() => Date.now())
 
+  // Social Graph State
+  const [followingIds, setFollowingIds] = useState<string[]>([])
+  const [connectionIds, setConnectionIds] = useState<string[]>([])
+
   useEffect(() => {
     const fetchEvents = async () => {
       if (!user) {
@@ -55,6 +60,15 @@ const EventsPage = () => {
       }
 
       try {
+        // Fetch User Social Graph
+        // We need full user object to get following/connections arrays
+        const userProfile = await api.get<any>(`/users/${user._id}`);
+        // Extract IDs regardless of whether they are populated objects or strings
+        const fIds = (userProfile.following || []).map((u: any) => typeof u === 'object' ? u._id : u);
+        const cIds = (userProfile.connections || []).map((u: any) => typeof u === 'object' ? u._id : u);
+        setFollowingIds(fIds);
+        setConnectionIds(cIds);
+
         // UW (University of Washington) Seattle campus coordinates
         const lat = 47.6554
         const long = -122.3001
@@ -135,6 +149,8 @@ const EventsPage = () => {
             <EventFeedList
               events={events}
               onSelectEvent={setSelectedEvent}
+              followingIds={followingIds}
+              connectionIds={connectionIds}
             />
           </div>
         </div>

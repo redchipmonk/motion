@@ -6,19 +6,23 @@ import Showcase from './Design Showcase 1.jpg'
 import Holiday from './close-up-shot-of-a-Christmas-tree.jpeg'
 
 export const MOCK_USERS: User[] = [
-  { _id: 'u1', name: 'Alice Chen', email: 'alice@uw.edu', handle: '@alice', bio: 'CS major, loves hiking.', avatarUrl: Holiday },
-  { _id: 'u2', name: 'Bob Smith', email: 'bob@uw.edu', handle: '@bob_s', bio: 'Architecture student.', avatarUrl: Showcase },
-  { _id: 'u3', name: 'Charlie Kim', email: 'charlie@uw.edu', handle: '@ckim', bio: 'Foodie and photographer.', avatarUrl: BakeSale },
-  { _id: 'u4', name: 'Diana Prince', email: 'diana@uw.edu', handle: '@wonder', bio: 'Just looking for fun events.', avatarUrl: Soccer },
-  { _id: 'u5', name: 'Evan Wright', email: 'evan@uw.edu', handle: '@ewright', bio: 'Music lover.' },
-  { _id: 'u6', name: 'Fiona Gallagher', email: 'fiona@uw.edu', handle: '@fi_g', bio: 'Always down for a party.' },
-  { _id: 'u7', name: 'George Miller', email: 'george@uw.edu', handle: '@gmiller', bio: 'Sports fanatic.' },
-  { _id: 'u8', name: 'Hannah Lee', email: 'hannah@uw.edu', handle: '@hlee', bio: 'Art enthusiast.' },
+  { _id: 'u1', name: 'Alice Chen', email: 'alice@uw.edu', handle: '@alice', bio: 'CS major, loves hiking.', avatarUrl: Holiday, userType: 'individual' },
+  { _id: 'u2', name: 'Bob Smith', email: 'bob@uw.edu', handle: '@bob_s', bio: 'Architecture student.', avatarUrl: Showcase, userType: 'individual' },
+  { _id: 'u3', name: 'Charlie Kim', email: 'charlie@uw.edu', handle: '@ckim', bio: 'Foodie and photographer.', avatarUrl: BakeSale, userType: 'individual' },
+  { _id: 'u4', name: 'Diana Prince', email: 'diana@uw.edu', handle: '@wonder', bio: 'Just looking for fun events.', avatarUrl: Soccer, userType: 'individual' },
+  { _id: 'u5', name: 'Evan Wright', email: 'evan@uw.edu', handle: '@ewright', bio: 'Music lover.', userType: 'individual' },
+  { _id: 'u6', name: 'Fiona Gallagher', email: 'fiona@uw.edu', handle: '@fi_g', bio: 'Always down for a party.', userType: 'individual' },
+  { _id: 'u7', name: 'George Miller', email: 'george@uw.edu', handle: '@gmiller', bio: 'Sports fanatic.', userType: 'individual' },
+  { _id: 'u8', name: 'Hannah Lee', email: 'hannah@uw.edu', handle: '@hlee', bio: 'Art enthusiast.', userType: 'individual' },
+  { _id: 'u9', name: 'Ian Wright', email: 'ian@uw.edu', handle: '@iwright', bio: 'Music lover.', userType: 'individual' },
+  // Organizations
+  { _id: 'h2', name: 'Eco Huskies', email: 'eco@uw.edu', handle: '@ecohuskies', bio: 'Eco Huskies is dedicated to keeping our campus clean and green.', avatarUrl: Trash, userType: 'organization' },
+  { _id: 'h3', name: 'UW Athletics', email: 'athletics@uw.edu', handle: '@uwathletics', bio: 'Official UW Athletics intramural sports.', avatarUrl: Soccer, userType: 'organization' },
+  { _id: 'h5', name: 'UW Lambda Phi Epsilon', email: 'lambdas@uw.edu', handle: '@uwlambdas', bio: 'UW Lambda Phi Epsilon fraternity.', avatarUrl: Holiday, userType: 'organization' },
 ];
 
 export const MOCK_RSVPS: RSVP[] = [
   // Event 1: Bake Sale (8 going)
-  { _id: 'r1', eventId: '1', userId: 'u1', status: 'going' },
   { _id: 'r2', eventId: '1', userId: 'u2', status: 'going' },
   { _id: 'r3', eventId: '1', userId: 'u3', status: 'going' },
   { _id: 'r4', eventId: '1', userId: 'u4', status: 'going' },
@@ -26,6 +30,7 @@ export const MOCK_RSVPS: RSVP[] = [
   { _id: 'r1_6', eventId: '1', userId: 'u6', status: 'going' },
   { _id: 'r1_7', eventId: '1', userId: 'u7', status: 'going' },
   { _id: 'r1_8', eventId: '1', userId: 'u8', status: 'going' },
+  { _id: 'r1_9', eventId: '1', userId: 'u9', status: 'going' },
 
   // Event 2: Campus Clean Up (2 going)
   { _id: 'r6', eventId: '2', userId: 'u6', status: 'going' },
@@ -126,6 +131,8 @@ export const MOCK_RSVPS: RSVP[] = [
   { _id: 'r81', eventId: '12', userId: 'u6', status: 'going' },
   { _id: 'r82', eventId: '12', userId: 'u7', status: 'going' },
   { _id: 'r83', eventId: '12', userId: 'u8', status: 'going' },
+  // RSVP for Past Concert (Event 15) for Alice (u1)
+  { _id: 'r84', eventId: '15', userId: 'u1', status: 'going' },
 ];
 
 // Helper function to create a date with specific time
@@ -410,6 +417,48 @@ export const MOCK_EVENTS: EventFeedItem[] = [
       bio: 'CS major, loves hiking and organizing community events!'
     }
   },
+  {
+    _id: '14',
+    title: 'Past Hiking Trip',
+    description: 'A great hike we did last month!',
+    dateTime: createEventDate(-30, 9), // -30 days
+    distance: 1200.0,
+    tags: ['Outdoors'],
+    images: [Trash],
+    status: 'published', // Published past event
+    location: {
+      coordinates: [-122.308, 47.656],
+      address: 'Rattlesnake Ledge'
+    },
+    participantCount: 5,
+    creatorDetails: {
+      _id: 'u1',
+      name: 'Alice Chen',
+      avatarUrl: Holiday,
+      bio: 'CS major...'
+    }
+  },
+  {
+    _id: '15',
+    title: 'Past Concert',
+    description: 'An amazing concert I went to.',
+    dateTime: createEventDate(-10, 20), // -10 days
+    distance: 50.0,
+    tags: ['Music'],
+    images: [Soccer],
+    status: 'published',
+    location: {
+      coordinates: [-122.3, 47.6],
+      address: 'Downtown'
+    },
+    participantCount: 100,
+    creatorDetails: {
+      _id: 'u5',
+      name: 'Evan Wright',
+      avatarUrl: BakeSale,
+      bio: 'Music lover.'
+    }
+  }
 ];
 
 // --- Mock Data Helpers ---

@@ -22,6 +22,10 @@ type EventFeedListProps = {
   events?: EventSummary[];
   /** Callback fired when user selects an event from the list. */
   onSelectEvent?: (event: EventSummary) => void;
+  /** IDs of users the current user follows (for prioritization) */
+  followingIds?: string[];
+  /** IDs of users connected to the current user (for prioritization) */
+  connectionIds?: string[];
 };
 
 /**
@@ -33,7 +37,7 @@ type EventFeedListProps = {
  * - Tag-based filtering via FilterPanel
  * - Chronological sorting (soonest first for upcoming, most recent first for past)
  */
-const EventFeedList = ({ onSelectEvent, events = [] }: EventFeedListProps) => {
+const EventFeedList = ({ onSelectEvent, events = [], followingIds = [], connectionIds = [] }: EventFeedListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -78,11 +82,26 @@ const EventFeedList = ({ onSelectEvent, events = [] }: EventFeedListProps) => {
     const base = events.filter((event) => matchesTab(event) && matchesSearchAndTags(event));
 
     return base.sort((a, b) => {
-      const aMs = a.startsAt ? new Date(a.startsAt).getTime() : 0;
-      const bMs = b.startsAt ? new Date(b.startsAt).getTime() : 0;
-      return activeTab === 'past' ? bMs - aMs : aMs - bMs;
+      // Priority Logic:
+      // 1. Hosted by connection/following (if upcoming)
+      // 2. Date (asc for upcoming, desc for past)
+
+      if (activeTab === 'upcoming') {
+        const aPriority = (followingIds?.includes(a.hostId || '') || connectionIds?.includes(a.hostId || '')) ? 1 : 0;
+        const bPriority = (followingIds?.includes(b.hostId || '') || connectionIds?.includes(b.hostId || '')) ? 1 : 0;
+
+        if (aPriority !== bPriority) return bPriority - aPriority; // Higher priority first
+
+        const aMs = a.startsAt ? new Date(a.startsAt).getTime() : 0;
+        const bMs = b.startsAt ? new Date(b.startsAt).getTime() : 0;
+        return aMs - bMs;
+      } else {
+        const aMs = a.startsAt ? new Date(a.startsAt).getTime() : 0;
+        const bMs = b.startsAt ? new Date(b.startsAt).getTime() : 0;
+        return bMs - aMs;
+      }
     });
-  }, [searchTerm, selectedTags, activeTab, events]);
+  }, [searchTerm, selectedTags, activeTab, events, followingIds, connectionIds]);
 
   /**
    * Handles event card selection.

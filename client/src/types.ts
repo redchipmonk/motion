@@ -11,6 +11,7 @@ export type EventSummary = {
   id: string;
   title: string;
   host: string;
+  hostId?: string;
   datetime: string;
   startsAt?: string;
   description?: string;
@@ -43,6 +44,7 @@ export interface EventFeedItem {
     coordinates: [number, number]; // [longitude, latitude]
     address?: string; // Human readable address
   };
+  createdBy?: string | { _id: string }; // Host ID
   creatorDetails?: {
     _id: string; // Added ID for host linking
     name: string;
@@ -68,6 +70,7 @@ export interface EventDetail extends EventSummary {
     avatarUrl: string;
     mutualConnections: number;
     bio: string;
+    userType?: 'individual' | 'organization';
   };
   otherEventsByHost: EventSummary[];
   similarEvents: EventSummary[];
@@ -80,6 +83,12 @@ export interface User {
   handle: string;
   avatarUrl?: string;
   bio?: string;
+  userType: 'individual' | 'organization';
+  connections?: User[];
+  followers?: User[];
+  following?: User[];
+  location?: string;
+  website?: string;
 }
 
 export interface RSVP {

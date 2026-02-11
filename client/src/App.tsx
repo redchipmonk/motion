@@ -8,6 +8,7 @@ import EventDetailPage from './pages/EventDetailPage'
 import CreateEventPage from './pages/CreateEventPage'
 import MyEventsPage from './pages/MyEventsPage'
 import ProfilePage from './pages/ProfilePage'
+import RSODashboard from './pages/RSODashboard'
 import NotFoundPage from './pages/NotFoundPage'
 
 const App = () => (
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/my-events" element={<MyEventsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/:userId" element={<ProfilePage />} />
+          <Route path="/manage/:rsoId" element={<RSODashboard />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

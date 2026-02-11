@@ -1,13 +1,17 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { HiBookmark, HiOutlineBookmark, HiXMark, HiUser, HiMagnifyingGlass } from 'react-icons/hi2';
+import { HiBookmark, HiOutlineBookmark, HiXMark, HiUser } from 'react-icons/hi2';
 import { TiLocation } from 'react-icons/ti';
 import { TfiLayoutGrid2Alt } from 'react-icons/tfi';
-import type { EventSummary, EventDetail } from '../types';
+import { api } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { useSocial } from '../hooks/useSocial';
+import type { EventSummary, EventDetail, User } from '../types';
 import { getEventById, getEventAttendees, getEventsByHost, getSimilarEvents } from '../data/mockData';
 import EventCard from '../components/EventCard';
 import { motionTheme, cn } from '../theme';
+import UserListOverlay from '../components/UserListOverlay';
 
 // --- Sub-components (could receive their own files later) ---
 
@@ -17,8 +21,8 @@ const AttendeeAvatar = ({ name, status }: { name: string; status: string }) => (
       <HiUser />
     </div>
     <span className="text-base font-bold text-motion-purple">{name}</span>
-    <span className="text-xs font-medium text-motion-purple/80 tracking-wide">
-      {status === 'following' ? 'Following' : status}
+    <span className="text-xs font-medium text-motion-purple/80 tracking-wide uppercase">
+      {status === 'following' ? 'FOLLOWING' : status}
     </span>
   </div>
 );
@@ -37,6 +41,7 @@ type RSVPStatus = 'going' | 'interested' | 'waitlist' | null;
 const EventDetailPage = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth(); // Get current user
 
   // Capture "now" at mount/render time purely to avoid purity lint errors
   const [now] = useState(() => Date.now());
@@ -64,84 +69,187 @@ const EventDetailPage = () => {
   const IMAGES_PER_PAGE = 3;
 
   // Attendees modal state
+  // Attendees modal state
   const [isAttendeesListOpen, setIsAttendeesListOpen] = useState(false);
-  const [attendeeSearch, setAttendeeSearch] = useState('');
 
-  // Load event data using useMemo
-  const event = useMemo<EventDetail | null>(() => {
-    if (!eventId) return null;
-    const found = getEventById(eventId);
+  // State for real data fetching
+  const [event, setEvent] = useState<EventDetail | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    if (found) {
-      // Fetch dynamic data
-      const attendees = getEventAttendees(found._id);
-      const otherEvents = getEventsByHost(found.creatorDetails?._id || '');
-      const similarEvents = getSimilarEvents(found._id);
+  // Hooks for API and Auth
+  // const { user } = useAuth(); // We might need this later, but useSocial handles auth internally for actions
 
-      // Transform raw data to EventDetail
-      return {
-        id: found._id,
-        title: found.title,
-        host: found.creatorDetails?.name || 'Unknown Host',
-        datetime: new Date(found.dateTime).toLocaleString(),
-        startsAt: found.dateTime,
-        distance: found.distance ? `${(found.distance / 1000).toFixed(1)} km` : undefined,
-        tags: found.tags || [],
-        heroImageUrl: found.images?.[0] || '/placeholder-event.jpg',
-        location: {
-          coordinates: found.location.coordinates,
-          address: found.location.address
-        },
-        // Details
-        description: found.description || "No description provided.",
-        attendeeCount: found.participantCount || 0,
-        attendees: attendees
-          .filter(a => a.status === 'going')
-          .map(a => ({
-            id: a._id,
-            name: a.name,
-            avatarUrl: a.avatarUrl,
-            status: a.status as 'following' | 'going' | 'interested'
-          })),
-        // Tripling images for pagination demo purposes
-        galleryImages: found.images ? [...found.images, ...found.images, ...found.images, ...found.images] : [],
-        hostDetails: {
-          id: found.creatorDetails?._id || 'h0',
-          name: found.creatorDetails?.name || 'Unknown',
-          avatarUrl: found.creatorDetails?.avatarUrl || found.images?.[0] || '',
-          mutualConnections: 0,
-          bio: found.creatorDetails?.bio || 'No bio available.'
-        },
-        otherEventsByHost: otherEvents
-          .filter(e => e._id !== found._id) // Exclude current event
-          .slice(0, 3) // Limit to 3 events
-          .map(e => ({
-            id: e._id,
-            title: e.title,
-            host: e.creatorDetails?.name || 'Unknown',
-            datetime: format(new Date(e.dateTime), 'MMM d @ h:mm a'),
-            heroImageUrl: e.images?.[0] || '',
-            location: {
-              coordinates: e.location.coordinates,
-              address: e.location.address
-            },
-            tags: e.tags || []
-          })),
-        similarEvents: similarEvents.map(e => ({
-          id: e._id,
-          title: e.title,
-          host: e.creatorDetails?.name || 'Unknown',
-          datetime: format(new Date(e.dateTime), 'MMM d @ h:mm a'),
-          heroImageUrl: e.images?.[0] || '',
+  // Prepare host user object for useSocial hook
+  const hostUser: User | null = event ? {
+    _id: event.hostDetails.id,
+    name: event.hostDetails.name,
+    email: '', // Not needed for actions
+    handle: '', // Not needed
+    userType: event.hostDetails.userType || 'individual', // Default fallback
+    avatarUrl: event.hostDetails.avatarUrl,
+    bio: event.hostDetails.bio
+  } : null;
+
+  const { connectionStatus, isFollowing, handleConnect, handleFollow, loading: socialLoading } = useSocial(hostUser);
+
+  // Fetch event data
+  useEffect(() => {
+    if (!eventId) return;
+
+    const fetchEventData = async () => {
+      setLoading(true);
+      try {
+        // 1. Fetch Event Details
+        const eventData = await api.get<any>(`/events/${eventId}`);
+
+        if (!eventData) throw new Error("Event not found");
+
+        let creator = eventData.creatorDetails || eventData.hostDetails || (typeof eventData.createdBy === 'object' ? eventData.createdBy : {}) || {};
+
+        // Fallback: If creator has no name and createdBy is an ID, fetch the user
+        if (!creator.name && typeof eventData.createdBy === 'string') {
+          try {
+            const userRes = await api.get<User>(`/users/${eventData.createdBy}`);
+            creator = userRes;
+          } catch (e) {
+            console.warn("Failed to fetch host details", e);
+          }
+        }
+
+        // 2. Fetch Other Events by Host (optional, can be parallel)
+        const otherEventsData = await api.get<any[]>(`/events?createdBy=${creator._id}&limit=3`);
+
+        // Transform to EventDetail
+        const transformed: EventDetail = {
+          id: eventData._id,
+          title: eventData.title,
+          host: creator.name || 'Unknown Host',
+          datetime: new Date(eventData.dateTime).toLocaleString(),
+          startsAt: eventData.dateTime,
+          distance: eventData.distance ? `${(eventData.distance / 1000).toFixed(1)} km` : undefined,
+          tags: eventData.tags || [],
+          heroImageUrl: eventData.images?.[0] || '/placeholder-event.jpg',
           location: {
-            coordinates: e.location.coordinates,
-            address: e.location.address
+            coordinates: eventData.location?.coordinates || [0, 0],
+            address: eventData.location?.address
           },
-          tags: e.tags || []
-        }))
-      };
-    }
-    return null;
+          description: eventData.description || "No description provided.",
+          attendeeCount: eventData.participantCount || 0,
+          attendees: [], // Todo: fetch real attendees
+          galleryImages: eventData.images || [],
+          hostDetails: {
+            id: creator._id,
+            name: creator.name || 'Unknown',
+            avatarUrl: creator.avatarUrl || '',
+            mutualConnections: 0,
+            bio: creator.bio || '',
+            userType: creator.userType
+          },
+          otherEventsByHost: otherEventsData
+            .filter((e: any) => e._id !== eventData._id)
+            .slice(0, 3)
+            .map((e: any) => ({
+              id: e._id,
+              title: e.title,
+              host: creator.name || 'Unknown',
+              datetime: format(new Date(e.dateTime), 'MMM d @ h:mm a'),
+              heroImageUrl: e.images?.[0] || '',
+              location: {
+                coordinates: e.location?.coordinates,
+                address: e.location?.address
+              },
+              tags: e.tags || []
+            })),
+          similarEvents: [] // Todo: Implement similar events endpoint
+        };
+
+        setEvent(transformed);
+
+      } catch (err) {
+        console.warn("Failed to fetch event from API, trying mock data...", err);
+
+        // Fallback to Mock Data
+        // We need to import these functions again inside the component or make sure they are available
+        // They are imported at the top, so we can use them.
+
+        // This logic mirrors the previous useMemo logic
+        const found = getEventById(eventId || '');
+        if (found) {
+          const attendees = getEventAttendees(found._id);
+          const otherEvents = getEventsByHost(found.creatorDetails?._id || '');
+          const similarEvents = getSimilarEvents(found._id);
+
+          const mockEvent: EventDetail = {
+            id: found._id,
+            title: found.title,
+            host: found.creatorDetails?.name || 'Unknown Host',
+            datetime: new Date(found.dateTime).toLocaleString(),
+            startsAt: found.dateTime,
+            distance: found.distance ? `${(found.distance / 1000).toFixed(1)} km` : undefined,
+            tags: found.tags || [],
+            heroImageUrl: found.images?.[0] || '/placeholder-event.jpg',
+            location: {
+              coordinates: found.location.coordinates,
+              address: found.location.address
+            },
+            description: found.description || "No description provided.",
+            attendeeCount: found.participantCount || 0,
+            attendees: attendees
+              .filter(a => a.status === 'going' || a.status === 'interested')
+              .map(a => ({
+                id: a._id,
+                name: a.name,
+                avatarUrl: a.avatarUrl,
+                status: a.status as 'following' | 'going' | 'interested'
+              })),
+            galleryImages: found.images ? [...found.images, ...found.images, ...found.images] : [],
+            hostDetails: {
+              id: found.creatorDetails?._id || 'h0',
+              name: found.creatorDetails?.name || 'Unknown',
+              avatarUrl: found.creatorDetails?.avatarUrl || found.images?.[0] || '',
+              mutualConnections: 0,
+              bio: found.creatorDetails?.bio || 'No bio available.',
+              userType: 'individual' // Mock data default
+            },
+            otherEventsByHost: otherEvents
+              .filter(e => e._id !== found._id)
+              .slice(0, 3)
+              .map(e => ({
+                id: e._id,
+                title: e.title,
+                host: e.creatorDetails?.name || 'Unknown',
+                datetime: format(new Date(e.dateTime), 'MMM d @ h:mm a'),
+                heroImageUrl: e.images?.[0] || '',
+                location: {
+                  coordinates: e.location.coordinates,
+                  address: e.location.address
+                },
+                tags: e.tags || []
+              })),
+            similarEvents: similarEvents.map(e => ({
+              id: e._id,
+              title: e.title,
+              host: e.creatorDetails?.name || 'Unknown',
+              datetime: format(new Date(e.dateTime), 'MMM d @ h:mm a'),
+              heroImageUrl: e.images?.[0] || '',
+              location: {
+                coordinates: e.location.coordinates,
+                address: e.location.address
+              },
+              tags: e.tags || []
+            }))
+          };
+          setEvent(mockEvent);
+        } else {
+          console.error("Event not found in mock data either.");
+          setEvent(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEventData();
   }, [eventId]);
 
   const handleRsvpAction = (action: 'going' | 'interested' | 'waitlist' | 'cancel' | 'remove') => {
@@ -300,7 +408,15 @@ const EventDetailPage = () => {
     return null;
   };
 
-  if (!event) return null; // Or loading spinner
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-motion-lavender">
+        <div className="text-xl font-bold text-motion-plum animate-pulse">Loading Event...</div>
+      </div>
+    )
+  }
+
+  if (!event) return <div className="p-12 text-center text-xl">Event not found</div>;
 
   const dateStr = event.startsAt || event.datetime;
   let formattedDate = 'Date TBA';
@@ -328,17 +444,29 @@ const EventDetailPage = () => {
                   {event.title}
                 </h1>
 
-                {/* Tags Section */}
-                <div className="flex gap-2">
-                  {event.tags?.map((tag: string) => (
-                    <span key={tag} className="px-4 py-1 rounded-full bg-motion-lilac text-motion-purple font-medium text-sm">
+                {/* Tags */}
+                <div className="flex flex-wrap gap-2">
+                  {event.tags?.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-4 py-1 rounded-full bg-motion-lilac text-motion-purple font-medium text-sm"
+                    >
                       {tag}
                     </span>
                   ))}
                 </div>
 
-                <h2 className="text-3xl font-bold text-black">
-                  {event.hostDetails.name}
+                {/* Host Name - Linked */}
+                <h2 className="text-3xl font-bold text-black mt-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/profile/${event.hostDetails.id}`);
+                    }}
+                    className="hover:text-motion-purple transition-colors text-left"
+                  >
+                    {event.hostDetails.name}
+                  </button>
                 </h2>
               </div>
 
@@ -373,14 +501,25 @@ const EventDetailPage = () => {
                   {formattedDate}
                 </div>
               </div>
-              <div className="absolute top-full left-0 mt-3">
-                {event.startsAt && new Date(event.startsAt).getTime() > now && (
+              <div className="absolute top-full left-0 mt-3 flex items-center gap-4">
+                {user && event.hostDetails.id === user._id ? (
+                  /* Host View: Edit Event */
                   <button
-                    onClick={() => navigate(`/events?eventId=${event.id}`)}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-black bg-transparent border-none shadow-none hover:opacity-80 transition-opacity"
+                    onClick={() => navigate(`/events/${event.id}/edit`)}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-black bg-transparent border-none shadow-none hover:underline transition-opacity"
                   >
-                    Switch to Map View <TiLocation className="text-motion-purple text-xl" />
+                    Edit Event <TiLocation className="text-motion-purple text-xl" />
                   </button>
+                ) : (
+                  /* Guest View: Switch to Map View */
+                  event.startsAt && new Date(event.startsAt).getTime() > now && (
+                    <button
+                      onClick={() => navigate(`/events?eventId=${event.id}`)}
+                      className="inline-flex items-center gap-1 text-sm font-medium text-black bg-transparent border-none shadow-none hover:opacity-80 transition-opacity"
+                    >
+                      Switch to Map View <TiLocation className="text-motion-purple text-xl" />
+                    </button>
+                  )
                 )}
               </div>
             </div>
@@ -406,7 +545,9 @@ const EventDetailPage = () => {
 
           <div className={cn("flex w-full overflow-x-auto pb-4 gap-6", event.attendees.length >= 7 ? "justify-between" : "")}>
             {event.attendees.slice(0, 7).map((attendee, i) => (
-              <AttendeeAvatar key={i} name={attendee.name} status={attendee.status} />
+              <div key={i} onClick={() => navigate(`/profile/${attendee.id}`)} className="cursor-pointer transition-opacity hover:opacity-80">
+                <AttendeeAvatar name={attendee.name} status={attendee.status} />
+              </div>
             ))}
           </div>
         </section>
@@ -467,11 +608,39 @@ const EventDetailPage = () => {
                   <img src={event.hostDetails.avatarUrl} alt={event.hostDetails.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex flex-col items-center text-center">
-                  <h4 className="text-[28px] font-bold text-motion-plum mb-1">{event.hostDetails.name}</h4>
+                  <h4
+                    className="text-[28px] font-bold text-motion-plum mb-1 cursor-pointer hover:underline hover:text-motion-purple transition-colors"
+                    onClick={() => navigate(`/profile/${event.hostDetails.id}`)}
+                  >
+                    {event.hostDetails.name}
+                  </h4>
                   <p className="font-medium mb-4">{event.hostDetails.mutualConnections} mutual followers</p>
-                  <button className="bg-motion-yellow text-motion-purple font-bold py-2 px-16 rounded-full border-2 border-transparent hover:border-motion-purple active:bg-motion-orange active:text-white active:border-motion-orange transition-all shadow-sm">
-                    Follow
-                  </button>
+                  {event.hostDetails.userType === 'organization' ? (
+                    <button
+                      onClick={handleFollow}
+                      disabled={socialLoading}
+                      className={cn(
+                        "bg-motion-yellow text-motion-purple font-bold py-2 px-16 rounded-full border-2 border-transparent transition-all shadow-sm",
+                        "hover:border-motion-purple active:bg-motion-orange active:text-white active:border-motion-orange",
+                        isFollowing && "bg-motion-lilac border-motion-purple"
+                      )}
+                    >
+                      {isFollowing ? 'Following' : 'Follow'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleConnect}
+                      disabled={socialLoading || connectionStatus === 'accepted' || connectionStatus === 'pending'}
+                      className={cn(
+                        "bg-motion-yellow text-motion-purple font-bold py-2 px-16 rounded-full border-2 border-transparent transition-all shadow-sm",
+                        "hover:border-motion-purple active:bg-motion-orange active:text-white active:border-motion-orange",
+                        connectionStatus === 'accepted' && "bg-green-100 text-green-700 border-green-200 cursor-default",
+                        connectionStatus === 'pending' && "bg-gray-100 text-gray-500 border-gray-200 cursor-default"
+                      )}
+                    >
+                      {connectionStatus === 'accepted' ? 'Connected' : connectionStatus === 'pending' ? 'Pending' : 'Connect'}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -578,59 +747,16 @@ const EventDetailPage = () => {
       )}
 
       {/* Attendees List Overlay */}
-      {isAttendeesListOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/95 overflow-y-auto"
-          onClick={() => setIsAttendeesListOpen(false)}
-        >
-          <div className="p-8 min-h-screen">
-            <div className="flex justify-end mb-8">
-              <button
-                onClick={() => setIsAttendeesListOpen(false)}
-                className="text-white text-4xl hover:text-motion-orange transition-colors"
-              >
-                <HiXMark />
-              </button>
-            </div>
-            <div className="max-w-3xl mx-auto">
-              <h2 className="text-4xl font-bold text-white mb-8 text-center">All Attendees ({event.attendeeCount})</h2>
-
-              {/* Search Input */}
-              <div
-                className="relative mb-8"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <HiMagnifyingGlass className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 text-xl" />
-                <input
-                  type="text"
-                  placeholder="Search attendees..."
-                  value={attendeeSearch}
-                  onChange={(e) => setAttendeeSearch(e.target.value)}
-                  className="w-full bg-white/10 border border-white/20 rounded-xl py-3 pl-12 pr-4 text-white placeholder-white/60 focus:outline-none focus:border-motion-purple focus:ring-1 focus:ring-motion-purple transition-all"
-                />
-              </div>
-
-              <div className="flex flex-col gap-4">
-                {event.attendees
-                  .filter(a => a.name.toLowerCase().includes(attendeeSearch.toLowerCase()))
-                  .map((attendee, i) => (
-                    <div key={i} className="flex items-center gap-6 p-4 bg-white/10 rounded-2xl backdrop-blur-sm border border-white/10 hover:bg-white/20 transition-colors cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                      <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center text-4xl text-[#d8b4fe] shrink-0">
-                        <HiUser />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xl font-bold text-white">{attendee.name}</span>
-                        <span className="text-sm font-medium text-white/70 uppercase tracking-wide">
-                          {attendee.status === 'following' ? 'Following' : attendee.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <UserListOverlay
+        isOpen={isAttendeesListOpen}
+        onClose={() => setIsAttendeesListOpen(false)}
+        title={`All Attendees (${event.attendeeCount})`}
+        users={event.attendees.map(a => ({
+          id: a.id,
+          name: a.name,
+          status: a.status
+        }))}
+      />
     </div>
   );
 };

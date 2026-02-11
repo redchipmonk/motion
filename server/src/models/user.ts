@@ -19,6 +19,9 @@ export interface UserDocument extends Document {
   bio?: string;
   organizations: string[];
   profileImage?: string;
+  connections: mongoose.Types.ObjectId[]; // For students: mutual connections
+  followers: mongoose.Types.ObjectId[];   // For RSOs: students following them
+  following: mongoose.Types.ObjectId[];   // For students: RSOs they follow
 }
 
 const userSchema = new Schema<UserDocument>(
@@ -51,6 +54,9 @@ const userSchema = new Schema<UserDocument>(
     bio: { type: String, default: "" },
     organizations: { type: [String], default: [] },
     profileImage: { type: String },
+    connections: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
+    followers: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
+    following: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
   },
   { timestamps: true }
 );

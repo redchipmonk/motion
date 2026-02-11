@@ -98,7 +98,7 @@ export class EventService {
    * @returns Event document or null if not found
    */
   async getEventById(id: string) {
-    return this.eventModel.findById(id).exec();
+    return this.eventModel.findById(id).populate('createdBy', 'name email userType avatarUrl bio').exec();
   }
 
   /**

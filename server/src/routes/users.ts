@@ -113,4 +113,61 @@ usersRouter.delete("/:id", protectedRoute, asyncHandler(async (req: AuthRequest,
   }
 }));
 
+usersRouter.post("/request-connection", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
+  const { recipientId } = req.body;
+  if (!isString(recipientId)) {
+    return res.status(400).json({ error: "Missing recipientId" });
+  }
+
+  await userService.requestConnection(req.user!._id.toString(), recipientId);
+  return res.status(200).json({ message: "Connection requested" });
+}));
+
+usersRouter.post("/accept-connection", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
+  const { requesterId } = req.body;
+  if (!isString(requesterId)) {
+    return res.status(400).json({ error: "Missing requesterId" });
+  }
+
+  await userService.acceptConnection(requesterId, req.user!._id.toString());
+  return res.status(200).json({ message: "Connection accepted" });
+}));
+
+usersRouter.post("/follow-rso", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
+  const { rsoId } = req.body;
+  if (!isString(rsoId)) {
+    return res.status(400).json({ error: "Missing rsoId" });
+  }
+
+  await userService.followRSO(req.user!._id.toString(), rsoId);
+  return res.status(200).json({ message: "RSO followed" });
+}));
+
+usersRouter.post("/unfollow-rso", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
+  const { rsoId } = req.body;
+  if (!isString(rsoId)) {
+    return res.status(400).json({ error: "Missing rsoId" });
+  }
+
+  await userService.unfollowRSO(req.user!._id.toString(), rsoId);
+  return res.status(200).json({ message: "RSO unfollowed" });
+}));
+
+// list connections for a user
+usersRouter.get("/:id/connections", asyncHandler(async (req, res) => {
+  const user = await userService.getUserById(req.params.id);
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  // Populate connections
+  const populatedUser = await user.populate("connections");
+  return res.json(populatedUser.connections);
+}));
+
+usersRouter.get("/managed-rsos", protectedRoute, asyncHandler(async (req: AuthRequest, res) => {
+  const rsos = await userService.getManagedRSOs(req.user!._id.toString());
+  return res.json(rsos);
+}));
+
 export default usersRouter;
